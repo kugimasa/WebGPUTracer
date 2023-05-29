@@ -104,6 +104,51 @@ WGPUAdapter inline RequestAdapter(WGPUInstance instance, WGPURequestAdapterOptio
   return user_data.adapter;
 }
 
+/// \brief Utility function to get a WebGPU device
+/// \param adapter
+/// \param descriptor
+/// \return
+WGPUDevice inline RequestDevice(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor) {
+  struct UserData {
+    WGPUDevice device = nullptr;
+    bool request_ended = false;
+  };
+
+  UserData user_data;
+
+  // Callback function for device request
+  auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, char const *message, void *p_user_data) {
+    UserData &user_data = *reinterpret_cast<UserData *>(p_user_data);
+    if (status == WGPURequestDeviceStatus_Success) {
+      user_data.device = device;
+    } else {
+      Error(PrintInfoType::WebGPU, "Could not get WebGPU device: ", message);
+    }
+    user_data.request_ended = true;
+  };
+
+  wgpuAdapterRequestDevice(
+      adapter,
+      descriptor,
+      OnDeviceRequestEnded,
+      (void *) &user_data
+  );
+
+  assert(user_data.request_ended);
+
+  return user_data.device;
+}
+
+/// \brief Callback function executed upon errors
+/// \param type
+/// \param message
+void inline OnDeviceError(WGPUErrorType type, char const *message, void *) {
+  Error(PrintInfoType::WebGPU, "Uncaptured device error: type ", type);
+  if (message) {
+    Error(PrintInfoType::WebGPU, "message: ", message);
+  }
+}
+
 /// \brief Show the adapter feature information
 /// \param adapter
 void inline ShowAdapterFeature(WGPUAdapter adapter) {

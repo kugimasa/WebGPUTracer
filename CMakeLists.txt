@@ -18,6 +18,7 @@ set_target_properties(Portracer PROPERTIES
                       )
 # Warning Settings
 if (MSVC)
+    set_target_properties(App PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
     target_compile_options(Portracer PRIVATE /W4)
 else ()
     target_compile_options(Portracer PRIVATE -Wall -Wextra -pedantic)

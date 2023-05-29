@@ -42,8 +42,21 @@ int main() {
   adapter_options.compatibleSurface = surface;
   WGPUAdapter adapter = RequestAdapter(instance, &adapter_options);
   Print(PrintInfoType::WebGPU, "Got adapter:", adapter);
-
   ShowAdapterFeature(adapter);
+  // Get WebGPU device
+  Print(PrintInfoType::WebGPU, "Requesting device ...");
+  // Minimal descriptor setting
+  WGPUDeviceDescriptor device_desc = {};
+  device_desc.nextInChain = nullptr;
+  device_desc.label = "Portracer Device";
+  device_desc.requiredFeaturesCount = 0;
+  device_desc.requiredLimits = nullptr;
+  device_desc.defaultQueue.nextInChain = nullptr;
+  device_desc.defaultQueue.label = "Default Queue";
+  WGPUDevice device = RequestDevice(adapter, &device_desc);
+  Print(PrintInfoType::WebGPU, "Got device: ", device);
+  // Error handling
+  wgpuDeviceSetUncapturedErrorCallback(device, OnDeviceError, nullptr);
 
   // Use Window
   if (!window) {
