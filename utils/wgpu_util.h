@@ -149,6 +149,13 @@ void inline OnDeviceError(WGPUErrorType type, char const *message, void *) {
   }
 }
 
+/// \brief Callback function to check the queue status
+/// \param type
+/// \param message
+void inline OnQueueWorkDone(WGPUQueueWorkDoneStatus status, void *) {
+  Print(PrintInfoType::WebGPU, "Queued work finished with status: ", status);
+}
+
 /// \brief Show the adapter feature information
 /// \param adapter
 void inline ShowAdapterFeature(WGPUAdapter adapter) {
