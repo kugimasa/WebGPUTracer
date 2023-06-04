@@ -25,8 +25,9 @@
  */
 
 #pragma once
-#include <webgpu/webgpu.h>
-
+#define WEBGPU_CPP_IMPLEMENTATION
+#include "webgpu/webgpu.hpp"
+using namespace wgpu;
 // Dawn and wgpu-native do not agree yet on the lifetime management
 // of objects. We align on Dawn convention of calling "release" the
 // methods that free memory for objects created with wgpuCreateSomething.
@@ -34,6 +35,7 @@
 // increment a reference counter, and release decreases this counter and
 // actually frees memory only when the counter gets to 0)
 #ifdef WEBGPU_BACKEND_WGPU
+// wgpu-native's non-standard parts are in a different header file:
 #include <webgpu/wgpu.h>
 #define wgpuInstanceRelease wgpuInstanceDrop
 #define wgpuAdapterRelease wgpuAdapterDrop
@@ -57,6 +59,7 @@
 #define wgpuSwapChainRelease wgpuSwapChainDrop
 #define wgpuTextureRelease wgpuTextureDrop
 #define wgpuTextureViewRelease wgpuTextureViewDrop
+#define release drop
 #endif
 
 ///
@@ -67,82 +70,10 @@
 #include <vector>
 #include "print_util.h"
 
-/// \brief Utility function to get a WebGPU adapter
-/// \param instance The WebGPU instance equivalent to `navigator.gpu`
-/// \param options
-/// \return
-WGPUAdapter inline RequestAdapter(WGPUInstance instance, WGPURequestAdapterOptions const *options) {
-  // Local information
-  struct UserData {
-    WGPUAdapter adapter = nullptr;
-    bool request_ended = false;
-  };
-
-  UserData user_data;
-
-  // Callback function for adapter request
-  auto OnAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const *message, void *p_user_data) {
-    UserData &user_data = *reinterpret_cast<UserData *>(p_user_data);
-    if (status == WGPURequestAdapterStatus_Success) {
-      user_data.adapter = adapter;
-    } else {
-      Error(PrintInfoType::WebGPU, "Could not get WebGPU adapter: ", message);
-    }
-    user_data.request_ended = true;
-  };
-
-  // Call to the WebGPU request adapter procedure
-  wgpuInstanceRequestAdapter(
-      instance,
-      options,
-      OnAdapterRequestEnded,
-      (void *) &user_data
-  );
-
-  assert(user_data.request_ended);
-
-  return user_data.adapter;
-}
-
-/// \brief Utility function to get a WebGPU device
-/// \param adapter
-/// \param descriptor
-/// \return
-WGPUDevice inline RequestDevice(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor) {
-  struct UserData {
-    WGPUDevice device = nullptr;
-    bool request_ended = false;
-  };
-
-  UserData user_data;
-
-  // Callback function for device request
-  auto OnDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, char const *message, void *p_user_data) {
-    UserData &user_data = *reinterpret_cast<UserData *>(p_user_data);
-    if (status == WGPURequestDeviceStatus_Success) {
-      user_data.device = device;
-    } else {
-      Error(PrintInfoType::WebGPU, "Could not get WebGPU device: ", message);
-    }
-    user_data.request_ended = true;
-  };
-
-  wgpuAdapterRequestDevice(
-      adapter,
-      descriptor,
-      OnDeviceRequestEnded,
-      (void *) &user_data
-  );
-
-  assert(user_data.request_ended);
-
-  return user_data.device;
-}
-
 /// \brief Callback function executed upon errors
 /// \param type
 /// \param message
-void inline OnDeviceError(WGPUErrorType type, char const *message, void *) {
+void inline OnDeviceError(ErrorType type, char const *message) {
   Error(PrintInfoType::WebGPU, "Uncaptured device error: type ", type);
   if (message) {
     Error(PrintInfoType::WebGPU, "message: ", message);
@@ -152,20 +83,18 @@ void inline OnDeviceError(WGPUErrorType type, char const *message, void *) {
 /// \brief Callback function to check the queue status
 /// \param type
 /// \param message
-void inline OnQueueWorkDone(WGPUQueueWorkDoneStatus status, void *) {
+void inline OnQueueWorkDone(QueueWorkDoneStatus status) {
   Print(PrintInfoType::WebGPU, "Queued work finished with status: ", status);
 }
 
 /// \brief Show the adapter feature information
 /// \param adapter
-void inline ShowAdapterFeature(WGPUAdapter adapter) {
+void inline ShowAdapterFeature(Adapter adapter) {
   std::vector<WGPUFeatureName> features;
-
   // Call the function a first time with a null return address, just to get the entry count.
-  size_t featureCount = wgpuAdapterEnumerateFeatures(adapter, nullptr);
+  size_t featureCount = adapter.enumerateFeatures(nullptr);
   // Allocate memory (could be a new, or a malloc() if this were a C program)
   features.resize(featureCount);
-
   // Call the function a second time, with a non-null return address
   wgpuAdapterEnumerateFeatures(adapter, features.data());
   Print(PrintInfoType::WebGPU, "Adapter features: ");
