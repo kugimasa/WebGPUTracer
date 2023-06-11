@@ -6,7 +6,7 @@ project(
 )
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(Portracer main.cpp utils/wgpu_util.h utils/print_util.h)
+add_executable(Portracer src/main.cpp src/utils/wgpu_util.h src/utils/print_util.h)
 add_subdirectory(glfw)
 add_subdirectory(glfw3webgpu)
 add_subdirectory(webgpu)

@@ -1,5 +1,5 @@
-#include <GLFW/glfw3.h>
-#include <glfw3webgpu.h>
+#include "GLFW/glfw3.h"
+#include "glfw3webgpu.h"
 #include "utils/wgpu_util.h"
 #include "utils/print_util.h"
 
