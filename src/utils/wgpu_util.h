@@ -26,8 +26,17 @@
 
 #pragma once
 #define WEBGPU_CPP_IMPLEMENTATION
+#include <iostream>
+#include <cassert>
+#include <vector>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include "print_util.h"
 #include "webgpu/webgpu.hpp"
 using namespace wgpu;
+namespace fs = std::filesystem;
 // Dawn and wgpu-native do not agree yet on the lifetime management
 // of objects. We align on Dawn convention of calling "release" the
 // methods that free memory for objects created with wgpuCreateSomething.
@@ -66,10 +75,6 @@ using namespace wgpu;
 /// webgpu-release.h copied from "Learn WebGPU for C++" book.
 ///
 
-#include <cassert>
-#include <vector>
-#include "print_util.h"
-
 /// \brief Callback function executed upon errors
 /// \param type
 /// \param message
@@ -87,18 +92,34 @@ void inline OnQueueWorkDone(QueueWorkDoneStatus status) {
   Print(PrintInfoType::WebGPU, "Queued work finished with status: ", status);
 }
 
-/// \brief Show the adapter feature information
-/// \param adapter
-void inline ShowAdapterFeature(Adapter adapter) {
-  std::vector<WGPUFeatureName> features;
-  // Call the function a first time with a null return address, just to get the entry count.
-  size_t featureCount = adapter.enumerateFeatures(nullptr);
-  // Allocate memory (could be a new, or a malloc() if this were a C program)
-  features.resize(featureCount);
-  // Call the function a second time, with a non-null return address
-  wgpuAdapterEnumerateFeatures(adapter, features.data());
-  Print(PrintInfoType::WebGPU, "Adapter features: ");
-  for (auto f: features) {
-    Print(PrintInfoType::WebGPU, " - ", f);
+/// \brief Function to load shader from file
+/// \param path shader path
+/// \param device WebGPU device
+/// \return Shader Module
+ShaderModule inline LoadShaderModule(const fs::path &path, Device device) {
+  std::ifstream file(path);
+  if (!file.is_open()) {
+    Error(PrintInfoType::Portracer, "Could not load shader from path: ", path);
+    return nullptr;
   }
+  file.seekg(0, std::ios::end);
+  size_t size = file.tellg();
+  std::string shaderSource(size, ' ');
+  file.seekg(0);
+  file.read(shaderSource.data(), size);
+
+  ShaderModuleWGSLDescriptor shaderCodeDesc;
+  shaderCodeDesc.chain.next = nullptr;
+  shaderCodeDesc.chain.sType = SType::ShaderModuleWGSLDescriptor;
+  ShaderModuleDescriptor shaderDesc;
+  shaderDesc.nextInChain = &shaderCodeDesc.chain;
+
+#ifdef WEBGPU_BACKEND_WGPU
+  shaderDesc.hintCount = 0;
+  shaderDesc.hints = nullptr;
+  shaderCodeDesc.code = shaderSource.c_str();
+#else
+  shaderCodeDesc.source = shaderSource.c_str();
+#endif
+  return device.createShaderModule(shaderDesc);
 }

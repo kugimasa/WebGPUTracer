@@ -46,6 +46,14 @@ int main() {
   device_desc.defaultQueue.label = "Default Queue";
   Device device = adapter.requestDevice(device_desc);
   Print(PrintInfoType::WebGPU, "Got device: ", device);
+
+  /// Output device capabilities
+  SupportedLimits supported_limits;
+  adapter.getLimits(&supported_limits);
+  Print(PrintInfoType::WebGPU, "adapter.maxVertexAttributes: ", supported_limits.limits.maxVertexAttributes);
+  device.getLimits(&supported_limits);
+  Print(PrintInfoType::WebGPU, "adapter.maxVertexAttributes: ", supported_limits.limits.maxVertexAttributes);
+
   // Error handling
   device.setUncapturedErrorCallback(OnDeviceError);
 
@@ -76,40 +84,7 @@ int main() {
 
   /// Shader source
   Print(PrintInfoType::WebGPU, "Creating shader module ...");
-  // TODO: READ FROM FILE
-  const char *shader_source = R"(
-  @vertex
-  fn vs_main(@builtin(vertex_index) in_vertex_index: u32) -> @builtin(position) vec4f {
-      var p = vec2f(0.0, 0.0);
-      if (in_vertex_index == 0u) {
-          p = vec2f(-0.5, -0.5);
-      } else if (in_vertex_index == 1u) {
-          p = vec2f(0.5, -0.5);
-      } else {
-          p = vec2f(0.0, 0.5);
-      }
-      return vec4f(p, 0.0, 1.0);
-  }
-  @fragment
-  fn fs_main() -> @location(0) vec4f {
-      return vec4f(239.0 / 255.0, 118.0 / 255.0, 122.0 / 255.0, 1.0);
-  }
-  )";
-  ShaderModuleDescriptor shader_desc;
-  #ifdef WEBGPU_BACKEND_WGPU
-  shader_desc.hintCount = 0;
-  shader_desc.hints = nullptr;
-  #endif
-  ShaderModuleWGSLDescriptor shader_code_desc;
-  shader_code_desc.chain.next = nullptr;
-  shader_code_desc.chain.sType = SType::ShaderModuleWGSLDescriptor;
-  shader_desc.nextInChain = &shader_code_desc.chain;
-  #ifdef WEBGPU_BACKEND_WGPU
-  shader_code_desc.code = shader_source;
-  #else
-  shader_code_desc.source = shader_source;
-  #endif
-  ShaderModule shader_module = device.createShaderModule(shader_desc);
+  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/triangle.wgsl", device);
   Print(PrintInfoType::WebGPU, "Shader module: ", shader_module);
 
   Print(PrintInfoType::WebGPU, "Creating pipeline ...");

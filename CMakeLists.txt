@@ -6,10 +6,28 @@ project(
 )
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(Portracer src/main.cpp src/utils/wgpu_util.h src/utils/print_util.h)
+# Development option
+option(DEV_MODE "Set up development helper settings" ON)
+
 add_subdirectory(glfw)
 add_subdirectory(glfw3webgpu)
 add_subdirectory(webgpu)
+
+add_executable(Portracer
+               src/main.cpp
+               src/utils/wgpu_util.h
+               src/utils/print_util.h)
+
+if (DEV_MODE)
+    target_compile_definitions(Portracer PRIVATE
+                               RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
+                               )
+else ()
+    target_compile_definitions(Portracer PRIVATE
+                               RESOURCE_DIR="./resources"
+                               )
+endif ()
+
 target_link_libraries(Portracer PRIVATE glfw webgpu glfw3webgpu)
 
 set_target_properties(Portracer PROPERTIES
@@ -18,7 +36,7 @@ set_target_properties(Portracer PROPERTIES
                       )
 # Warning Settings
 if (MSVC)
-    set_target_properties(App PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
+    set_target_properties(Portracer PROPERTIES VS_DEBUGGER_ENVIRONMENT "DAWN_DEBUG_BREAK_ON_ERROR=1")
     target_compile_options(Portracer PRIVATE /W4)
 else ()
     target_compile_options(Portracer PRIVATE -Wall -Wextra -pedantic)
