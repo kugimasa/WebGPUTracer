@@ -34,25 +34,31 @@ int main() {
   Adapter adapter = instance.requestAdapter(adapter_options);
   Print(PrintInfoType::WebGPU, "Got adapter:", adapter);
 
+  /// Get adapter capabilities
+  SupportedLimits supported_limits;
+  adapter.getLimits(&supported_limits);
+
   /// Get WebGPU device
   Print(PrintInfoType::WebGPU, "Requesting device ...");
+  // Setting up required limits
+  RequiredLimits requiredLimits = Default;
+  requiredLimits.limits.maxBindGroups = 1;
+  requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
+  requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
+  // Without this, wgpu-native crashes
+  requiredLimits.limits.maxBufferSize = 15 * 5 * sizeof(float);
+  // This must be set even if we do not use storage buffers for now
+  requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
+  // This must be set even if we do not use uniform buffers for now
+  requiredLimits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
   // Minimal descriptor setting
   DeviceDescriptor device_desc = {};
-  device_desc.nextInChain = nullptr;
   device_desc.label = "Portracer Device";
   device_desc.requiredFeaturesCount = 0;
-  device_desc.requiredLimits = nullptr;
-  device_desc.defaultQueue.nextInChain = nullptr;
+  device_desc.requiredLimits = &requiredLimits;
   device_desc.defaultQueue.label = "Default Queue";
   Device device = adapter.requestDevice(device_desc);
   Print(PrintInfoType::WebGPU, "Got device: ", device);
-
-  /// Output device capabilities
-  SupportedLimits supported_limits;
-  adapter.getLimits(&supported_limits);
-  Print(PrintInfoType::WebGPU, "adapter.maxVertexAttributes: ", supported_limits.limits.maxVertexAttributes);
-  device.getLimits(&supported_limits);
-  Print(PrintInfoType::WebGPU, "adapter.maxVertexAttributes: ", supported_limits.limits.maxVertexAttributes);
 
   // Error handling
   device.setUncapturedErrorCallback(OnDeviceError);
@@ -135,10 +141,59 @@ int main() {
   pipeline_desc.multisample.count = 1;
   pipeline_desc.multisample.mask = ~0u;
   pipeline_desc.multisample.alphaToCoverageEnabled = false;
-  /// Pipeline layout
-  pipeline_desc.layout = nullptr;
+  /// Create binding layout
+  BindGroupLayoutEntry binding_layout = Default;
+  binding_layout.binding = 0;
+  binding_layout.visibility = ShaderStage::Fragment;
+  // We change here if we want to bind texture or samplers
+  binding_layout.buffer.type = BufferBindingType::Uniform;
+  binding_layout.buffer.minBindingSize = sizeof(float);
+  /// Create a bind group layout
+  BindGroupLayoutDescriptor bind_group_layout_desc{};
+  bind_group_layout_desc.entryCount = 1;
+  bind_group_layout_desc.entries = &binding_layout;
+  BindGroupLayout bind_group_layout = device.createBindGroupLayout(bind_group_layout_desc);
+  /// Create a pipeline layout
+  PipelineLayoutDescriptor layout_desc{};
+  layout_desc.bindGroupLayoutCount = 1;
+  layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) &bind_group_layout;
+  PipelineLayout layout = device.createPipelineLayout(layout_desc);
+  pipeline_desc.layout = layout;
+  /// Create a render pipeline
   RenderPipeline pipeline = device.createRenderPipeline(pipeline_desc);
   Print(PrintInfoType::WebGPU, "Render pipeline: ", pipeline);
+
+  /// Create buffer
+  BufferDescriptor buffer_desc{};
+  /// Create uniform buffer
+  // uTime & uIsWgpuNative
+  // buffer_desc.size = 2 * sizeof(float);
+  buffer_desc.size = sizeof(float);
+  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
+  buffer_desc.mappedAtCreation = false;
+  Print(PrintInfoType::WebGPU, "----");
+  Buffer uniform_buffer = device.createBuffer(buffer_desc);
+  Print(PrintInfoType::WebGPU, "++++");
+  float current_time = 1.0f;
+  float is_wgpu_native = 0.0f;
+  #ifdef WEBGPU_BACKEND_WGPU
+  is_wgpu_native = 1.0f;
+  #endif
+  std::vector<float> uniform_data = {current_time, is_wgpu_native};
+  queue.writeBuffer(uniform_buffer, 0, &current_time, buffer_desc.size);
+
+  /// Create a binding
+  BindGroupEntry binding{};
+  binding.binding = 0;
+  binding.buffer = uniform_buffer;
+  // We set the offset to hold multiple uniform blocks
+  binding.offset = 0;
+  binding.size = sizeof(float);
+  BindGroupDescriptor bind_group_desc{};
+  bind_group_desc.layout = bind_group_layout;
+  bind_group_desc.entryCount = bind_group_layout_desc.entryCount;
+  bind_group_desc.entries = &binding;
+  BindGroup bind_group = device.createBindGroup(bind_group_desc);
 
   /// Use Window
   if (!window) {
@@ -148,6 +203,10 @@ int main() {
   }
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
+
+    // Update uniform buffer
+    float t = static_cast<float>(glfwGetTime());
+    queue.writeBuffer(uniform_buffer, 0, &t, sizeof(float));
 
     // Get target texture view
     TextureView next_texture = swap_chain.getCurrentTextureView();
@@ -180,6 +239,8 @@ int main() {
     RenderPassEncoder render_pass = encoder.beginRenderPass(render_pass_desc);
     /// Draw Call
     render_pass.setPipeline(pipeline);
+    // Set binding group
+    render_pass.setBindGroup(0, bind_group, 0, nullptr);
     render_pass.draw(3, 1, 0, 0);
     /// Just end the command for now
     render_pass.end();
