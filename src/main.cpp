@@ -166,21 +166,15 @@ int main() {
   /// Create buffer
   BufferDescriptor buffer_desc{};
   /// Create uniform buffer
-  // uTime & uIsWgpuNative
-  // buffer_desc.size = 2 * sizeof(float);
   buffer_desc.size = sizeof(float);
   buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
   buffer_desc.mappedAtCreation = false;
-  Print(PrintInfoType::WebGPU, "----");
   Buffer uniform_buffer = device.createBuffer(buffer_desc);
-  Print(PrintInfoType::WebGPU, "++++");
-  float current_time = 1.0f;
   float is_wgpu_native = 0.0f;
   #ifdef WEBGPU_BACKEND_WGPU
   is_wgpu_native = 1.0f;
   #endif
-  std::vector<float> uniform_data = {current_time, is_wgpu_native};
-  queue.writeBuffer(uniform_buffer, 0, &current_time, buffer_desc.size);
+  queue.writeBuffer(uniform_buffer, 0, &is_wgpu_native, buffer_desc.size);
 
   /// Create a binding
   BindGroupEntry binding{};
@@ -203,10 +197,6 @@ int main() {
   }
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
-
-    // Update uniform buffer
-    float t = static_cast<float>(glfwGetTime());
-    queue.writeBuffer(uniform_buffer, 0, &t, sizeof(float));
 
     // Get target texture view
     TextureView next_texture = swap_chain.getCurrentTextureView();
