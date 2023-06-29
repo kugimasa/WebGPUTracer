@@ -12,6 +12,15 @@ class Renderer {
   bool IsRunning();
 
  private:
+  bool InitDevice();
+  void InitSwapChain();
+  void InitBindGroupLayout();
+  void InitRenderPipeline();
+  void InitComputePipeline();
+  void InitBuffers();
+  void InitBindGroup();
+
+ private:
   GLFWwindow *window_ = nullptr;
   Instance instance_ = nullptr;
   Adapter adapter_ = nullptr;
@@ -19,9 +28,15 @@ class Renderer {
   Surface surface_ = nullptr;
   Queue queue_ = nullptr;
   SwapChain swap_chain_ = nullptr;
-  Buffer uniform_buffer_ = nullptr;
-  RenderPipeline pipeline_ = nullptr;
+  TextureFormat swap_chain_format_ = TextureFormat::Undefined;
+  BindGroupLayout bind_group_layout_ = nullptr;
+  PipelineLayout pipeline_layout_ = nullptr;
+  RenderPipeline render_pipeline_ = nullptr;
+  ComputePipeline compute_pipeline_ = nullptr;
   BindGroup bind_group_ = nullptr;
+  Buffer uniform_buffer_ = nullptr;
+  Buffer input_buffer_ = nullptr;
+  Buffer output_buffer_ = nullptr;
 };
 
 /// \brief Initialize function
@@ -37,6 +52,18 @@ inline bool Renderer::OnInit() {
   glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
   window_ = glfwCreateWindow(640, 480, "Portracer (_)=---=(_)", NULL, NULL);
 
+  if (!InitDevice()) return false;
+  InitSwapChain();
+  InitBindGroupLayout();
+  InitRenderPipeline();
+  InitBuffers();
+  InitBindGroup();
+  return true;
+}
+
+/// \brief WebGPU Device setup
+/// \return
+inline bool Renderer::InitDevice() {
   /// Setup WebGPU
   InstanceDescriptor desc = {};
   /// Create WebGPU instance
@@ -90,16 +117,19 @@ inline bool Renderer::OnInit() {
   // signalValue is 0 for now
   queue_.onSubmittedWorkDone(0, OnQueueWorkDone);
   #endif
+  return true;
+}
 
-  /// Create swap chain
+/// \brief WebGPU SwapChain setup
+inline void Renderer::InitSwapChain() {
   SwapChainDescriptor swap_chain_desc = {};
   swap_chain_desc.nextInChain = nullptr;
   swap_chain_desc.width = 640;
   swap_chain_desc.height = 480;
   /// Texture format
   #ifdef WEBGPU_BACKEND_WGPU
-  TextureFormat swap_chain_format = surface_.getPreferredFormat(adapter_);
-  swap_chain_desc.format = swap_chain_format;
+  swap_chain_format_ = surface_.getPreferredFormat(adapter_);
+  swap_chain_desc.format = swap_chain_format_;
   #else
   // For Dawn BGRA8Unorm only
   swap_chain_desc.format = TextureFormat::BGRA8Unorm;
@@ -108,13 +138,31 @@ inline bool Renderer::OnInit() {
   swap_chain_desc.presentMode = PresentMode::Fifo;
   swap_chain_ = device_.createSwapChain(surface_, swap_chain_desc);
   Print(PrintInfoType::WebGPU, "Swapchain: ", swap_chain_);
+}
 
+/// \brief WebGPU BindGroupLayout
+inline void Renderer::InitBindGroupLayout() {
+  /// Create binding layout
+  BindGroupLayoutEntry binding_layout = Default;
+  binding_layout.binding = 0;
+  binding_layout.visibility = ShaderStage::Fragment;
+  // We change here if we want to bind texture or samplers
+  binding_layout.buffer.type = BufferBindingType::Uniform;
+  binding_layout.buffer.minBindingSize = sizeof(float);
+  /// Create a bind group layout
+  BindGroupLayoutDescriptor bind_group_layout_desc{};
+  bind_group_layout_desc.entryCount = 1;
+  bind_group_layout_desc.entries = &binding_layout;
+  bind_group_layout_ = device_.createBindGroupLayout(bind_group_layout_desc);
+}
+
+/// \brief WebGPU RenderPipeline setup
+inline void Renderer::InitRenderPipeline() {
+  Print(PrintInfoType::WebGPU, "Creating render pipeline ...");
   /// Shader source
   Print(PrintInfoType::WebGPU, "Creating shader module ...");
   ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/triangle.wgsl", device_);
   Print(PrintInfoType::WebGPU, "Shader module: ", shader_module);
-
-  Print(PrintInfoType::WebGPU, "Creating pipeline ...");
   /// Render pipeline setup
   RenderPipelineDescriptor pipeline_desc;
   /// Vertex pipeline state
@@ -149,7 +197,7 @@ inline bool Renderer::OnInit() {
   blend_state.alpha.operation = BlendOperation::Add;
   ColorTargetState color_target;
   #ifdef WEBGPU_BACKEND_WGPU
-  color_target.format = swap_chain_format;
+  color_target.format = swap_chain_format_;
   #else
   // For Dawn BGRA8Unorm only
   color_target.format = TextureFormat::BGRA8Unorm;
@@ -162,29 +210,45 @@ inline bool Renderer::OnInit() {
   pipeline_desc.multisample.count = 1;
   pipeline_desc.multisample.mask = ~0u;
   pipeline_desc.multisample.alphaToCoverageEnabled = false;
-  /// Create binding layout
-  BindGroupLayoutEntry binding_layout = Default;
-  binding_layout.binding = 0;
-  binding_layout.visibility = ShaderStage::Fragment;
-  // We change here if we want to bind texture or samplers
-  binding_layout.buffer.type = BufferBindingType::Uniform;
-  binding_layout.buffer.minBindingSize = sizeof(float);
-  /// Create a bind group layout
-  BindGroupLayoutDescriptor bind_group_layout_desc{};
-  bind_group_layout_desc.entryCount = 1;
-  bind_group_layout_desc.entries = &binding_layout;
-  BindGroupLayout bind_group_layout = device_.createBindGroupLayout(bind_group_layout_desc);
   /// Create a pipeline layout
   PipelineLayoutDescriptor layout_desc{};
   layout_desc.bindGroupLayoutCount = 1;
-  layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) &bind_group_layout;
+  layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) &bind_group_layout_;
   PipelineLayout layout = device_.createPipelineLayout(layout_desc);
   pipeline_desc.layout = layout;
   /// Create a render pipeline
-  pipeline_ = device_.createRenderPipeline(pipeline_desc);
-  Print(PrintInfoType::WebGPU, "Render pipeline: ", pipeline_);
+  render_pipeline_ = device_.createRenderPipeline(pipeline_desc);
+  Print(PrintInfoType::WebGPU, "Render pipeline: ", render_pipeline_);
+}
 
-  /// Create buffer
+/// \brief WebGPU ComputePipeline setup
+inline void Renderer::InitComputePipeline() {
+  Print(PrintInfoType::WebGPU, "Creating compute pipeline ...");
+  /// Shader source
+  Print(PrintInfoType::WebGPU, "Creating shader module ...");
+  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/triangle.wgsl", device_);
+  Print(PrintInfoType::WebGPU, "Shader module: ", shader_module);
+
+  /// Create a pipeline layout
+  PipelineLayoutDescriptor layout_desc{};
+  layout_desc.bindGroupLayoutCount = 1;
+  layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) &bind_group_layout_;
+  PipelineLayout layout = device_.createPipelineLayout(layout_desc);
+
+  /// Compute pipeline setup
+  ComputePipelineDescriptor pipeline_desc;
+  pipeline_desc.compute.constantCount = 0;
+  pipeline_desc.compute.constants = nullptr;
+  pipeline_desc.compute.entryPoint = "ComputeShader";
+  pipeline_desc.compute.module = shader_module;
+  pipeline_desc.layout = layout;
+  /// Create a compute pipeline
+  compute_pipeline_ = device_.createComputePipeline(pipeline_desc);
+  Print(PrintInfoType::WebGPU, "Compute pipeline: ", compute_pipeline_);
+}
+
+/// \brief WebGPU Buffer setup
+inline void Renderer::InitBuffers() {
   BufferDescriptor buffer_desc{};
   /// Create uniform buffer
   buffer_desc.size = sizeof(float);
@@ -196,7 +260,10 @@ inline bool Renderer::OnInit() {
   is_wgpu_native = 1.0f;
   #endif
   queue_.writeBuffer(uniform_buffer_, 0, &is_wgpu_native, buffer_desc.size);
+}
 
+/// \brief WebGPU BindGroup setup
+inline void Renderer::InitBindGroup() {
   /// Create a binding
   BindGroupEntry binding{};
   binding.binding = 0;
@@ -205,13 +272,13 @@ inline bool Renderer::OnInit() {
   binding.offset = 0;
   binding.size = sizeof(float);
   BindGroupDescriptor bind_group_desc{};
-  bind_group_desc.layout = bind_group_layout;
-  bind_group_desc.entryCount = bind_group_layout_desc.entryCount;
+  bind_group_desc.layout = bind_group_layout_;
+  bind_group_desc.entryCount = 1;
   bind_group_desc.entries = &binding;
   bind_group_ = device_.createBindGroup(bind_group_desc);
-  return true;
 }
 
+/// \brief Compute pass
 inline void Renderer::OnCompute() {
   // Initialize a command encoder
   CommandEncoderDescriptor encoder_desc = Default;
@@ -262,7 +329,7 @@ inline void Renderer::OnFrame() {
   render_pass_desc.nextInChain = nullptr;
   RenderPassEncoder render_pass = encoder.beginRenderPass(render_pass_desc);
   /// Draw Call
-  render_pass.setPipeline(pipeline_);
+  render_pass.setPipeline(render_pipeline_);
   // Set binding group
   render_pass.setBindGroup(0, bind_group_, 0, nullptr);
   render_pass.draw(3, 1, 0, 0);
@@ -284,8 +351,18 @@ inline void Renderer::OnFrame() {
 /// \brief Called on application quit
 inline void Renderer::OnFinish() {
   /// WebGPU stuff
-  // Release WebGPU queue
-  queue_.release();
+  // Release WebGPU bind group
+  bind_group_.release();
+  // Release WebGPU buffer
+  uniform_buffer_.destroy();
+  input_buffer_.destroy();
+  output_buffer_.destroy();
+  // Release WebGPU pipelines
+  render_pipeline_.release();
+  compute_pipeline_.release();
+  pipeline_layout_.release();
+  // Release WebGPU bind group layout
+  bind_group_layout_.release();
   // Release WebGPU swap chain
   swap_chain_.release();
   // Release WebGPU device
