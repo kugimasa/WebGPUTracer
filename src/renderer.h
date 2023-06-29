@@ -6,6 +6,7 @@
 class Renderer {
  public:
   bool OnInit();
+  void OnCompute();
   void OnFrame();
   void OnFinish();
   bool IsRunning();
@@ -211,6 +212,22 @@ inline bool Renderer::OnInit() {
   return true;
 }
 
+inline void Renderer::OnCompute() {
+  // Initialize a command encoder
+  CommandEncoderDescriptor encoder_desc = Default;
+  CommandEncoder encoder = device_.createCommandEncoder(encoder_desc);
+
+  // Create and use compute pass
+  // Encode and submit the GPU commands
+  CommandBuffer commands = encoder.finish(CommandBufferDescriptor{});
+  queue_.submit(commands);
+  // Clean up
+#ifdef WEBGPU_BACKEND_DAWN
+  commands.release();
+  encoder.release();
+#endif
+}
+
 /// \brief Called every frame
 inline void Renderer::OnFrame() {
   glfwPollEvents();
@@ -267,6 +284,8 @@ inline void Renderer::OnFrame() {
 /// \brief Called on application quit
 inline void Renderer::OnFinish() {
   /// WebGPU stuff
+  // Release WebGPU queue
+  queue_.release();
   // Release WebGPU swap chain
   swap_chain_.release();
   // Release WebGPU device
