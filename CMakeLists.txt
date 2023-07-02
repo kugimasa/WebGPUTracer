@@ -15,9 +15,11 @@ add_subdirectory(webgpu)
 
 add_executable(Portracer
                src/main.cpp
-               src/renderer.h
+               src/render.cpp
+               src/include/renderer.h
                src/utils/wgpu_util.h
-               src/utils/print_util.h)
+               src/utils/print_util.h
+               external/implementation.cpp)
 
 if (DEV_MODE)
     target_compile_definitions(Portracer PRIVATE

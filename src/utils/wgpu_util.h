@@ -25,7 +25,6 @@
  */
 
 #pragma once
-#define WEBGPU_CPP_IMPLEMENTATION
 #include <iostream>
 #include <cassert>
 #include <vector>

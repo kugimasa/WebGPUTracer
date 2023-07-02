@@ -1,51 +1,9 @@
-#pragma once
-#include "GLFW/glfw3.h"
-#include "glfw3webgpu.h"
-#include "utils/wgpu_util.h"
-
-class Renderer {
- public:
-  bool OnInit(bool hasWindow);
-  void OnCompute();
-  void OnFrame();
-  void OnFinish();
-  bool IsRunning();
-
- private:
-  bool InitDevice();
-  void InitSwapChain();
-  void InitBindGroupLayout();
-  void InitRenderPipeline();
-  void InitComputePipeline();
-  void InitBuffers();
-  void InitBindGroup();
-
- private:
-  bool hasWindow_ = false;
-  GLFWwindow *window_ = nullptr;
-  Instance instance_ = nullptr;
-  Adapter adapter_ = nullptr;
-  Device device_ = nullptr;
-  Surface surface_ = nullptr;
-  Queue queue_ = nullptr;
-  SwapChain swap_chain_ = nullptr;
-  TextureFormat swap_chain_format_ = TextureFormat::Undefined;
-  BindGroupLayout bind_group_layout_ = nullptr;
-  PipelineLayout pipeline_layout_ = nullptr;
-  RenderPipeline render_pipeline_ = nullptr;
-  ComputePipeline compute_pipeline_ = nullptr;
-  BindGroup bind_group_ = nullptr;
-  uint32_t buffer_size_;
-  Buffer uniform_buffer_ = nullptr;
-  Buffer input_buffer_ = nullptr;
-  Buffer output_buffer_ = nullptr;
-  Buffer map_buffer_ = nullptr;
-};
+#include "include/renderer.h"
 
 /// \brief Initialize function
 /// \param hasWindow Uses window by glfw if true
 /// \return whether properly initialized
-inline bool Renderer::OnInit(bool hasWindow) {
+bool Renderer::OnInit(bool hasWindow) {
   hasWindow_ = hasWindow;
   if (hasWindow_) {
     /// Initialize GLFW
@@ -72,7 +30,7 @@ inline bool Renderer::OnInit(bool hasWindow) {
 
 /// \brief WebGPU Device setup
 /// \return
-inline bool Renderer::InitDevice() {
+bool Renderer::InitDevice() {
   /// Setup WebGPU
   InstanceDescriptor desc = {};
   /// Create WebGPU instance
@@ -147,7 +105,7 @@ inline bool Renderer::InitDevice() {
 }
 
 /// \brief WebGPU SwapChain setup
-inline void Renderer::InitSwapChain() {
+void Renderer::InitSwapChain() {
   SwapChainDescriptor swap_chain_desc = {};
   swap_chain_desc.nextInChain = nullptr;
   swap_chain_desc.width = 640;
@@ -167,7 +125,7 @@ inline void Renderer::InitSwapChain() {
 }
 
 /// \brief WebGPU BindGroupLayout
-inline void Renderer::InitBindGroupLayout() {
+void Renderer::InitBindGroupLayout() {
   Print(PrintInfoType::WebGPU, "Create bind group layout ...");
   std::vector<BindGroupLayoutEntry> bindings(2, Default);
 
@@ -189,7 +147,7 @@ inline void Renderer::InitBindGroupLayout() {
 }
 
 /// \brief WebGPU RenderPipeline setup
-inline void Renderer::InitRenderPipeline() {
+void Renderer::InitRenderPipeline() {
   Print(PrintInfoType::WebGPU, "Creating render pipeline ...");
   /// Shader source
   Print(PrintInfoType::WebGPU, "Creating shader module ...");
@@ -254,7 +212,7 @@ inline void Renderer::InitRenderPipeline() {
 }
 
 /// \brief WebGPU ComputePipeline setup
-inline void Renderer::InitComputePipeline() {
+void Renderer::InitComputePipeline() {
   Print(PrintInfoType::WebGPU, "Creating compute pipeline ...");
   /// Shader source
   Print(PrintInfoType::WebGPU, "Creating shader module ...");
@@ -280,7 +238,7 @@ inline void Renderer::InitComputePipeline() {
 }
 
 /// \brief WebGPU Buffer setup
-inline void Renderer::InitBuffers() {
+void Renderer::InitBuffers() {
   Print(PrintInfoType::WebGPU, "Creating buffers ...");
   BufferDescriptor buffer_desc{};
   buffer_desc.mappedAtCreation = false;
@@ -310,7 +268,7 @@ inline void Renderer::InitBuffers() {
 }
 
 /// \brief WebGPU BindGroup setup
-inline void Renderer::InitBindGroup() {
+void Renderer::InitBindGroup() {
   Print(PrintInfoType::WebGPU, "Creating bind group ...");
   /// Create a binding
   std::vector<BindGroupEntry> entries(2, Default);
@@ -335,7 +293,7 @@ inline void Renderer::InitBindGroup() {
 }
 
 /// \brief Compute pass
-inline void Renderer::OnCompute() {
+void Renderer::OnCompute() {
   Print(PrintInfoType::Portracer, "Running compute pass ...");
   /// Input buffer
   std::vector<float> input(buffer_size_ / sizeof(float));
@@ -406,7 +364,7 @@ inline void Renderer::OnCompute() {
 }
 
 /// \brief Called every frame
-inline void Renderer::OnFrame() {
+void Renderer::OnFrame() {
   glfwPollEvents();
 
   // Get target texture view
@@ -459,7 +417,7 @@ inline void Renderer::OnFrame() {
 }
 
 /// \brief Called on application quit
-inline void Renderer::OnFinish() {
+void Renderer::OnFinish() {
   /// WebGPU stuff
   /// Release WebGPU bind group
   bind_group_.release();
@@ -500,6 +458,6 @@ inline void Renderer::OnFinish() {
 
 /// \brief Check if the renderer is running
 /// \return Running or not
-inline bool Renderer::IsRunning() {
+bool Renderer::IsRunning() {
   return !glfwWindowShouldClose(window_);
 }
