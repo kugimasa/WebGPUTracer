@@ -3,12 +3,20 @@
 int main() {
   Print(PrintInfoType::Portracer, "Starting Portracer (_)=---=(_)");
   Renderer renderer;
-  renderer.OnInit();
+  bool hasWindow = false;
+  renderer.OnInit(hasWindow);
 
-  while (renderer.IsRunning()) {
-    renderer.OnFrame();
+  // RenderPipeline
+  if (hasWindow) {
+    while (renderer.IsRunning()) {
+      renderer.OnFrame();
+    }
   }
 
+  // ComputePipeline
+  renderer.OnCompute();
+
   renderer.OnFinish();
+  Print(PrintInfoType::Portracer, "(_)=---=(_) Portracer Finished");
   return 0;
 }

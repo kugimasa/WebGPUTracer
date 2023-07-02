@@ -5,7 +5,7 @@
 
 class Renderer {
  public:
-  bool OnInit();
+  bool OnInit(bool hasWindow);
   void OnCompute();
   void OnFrame();
   void OnFinish();
@@ -21,6 +21,7 @@ class Renderer {
   void InitBindGroup();
 
  private:
+  bool hasWindow_ = false;
   GLFWwindow *window_ = nullptr;
   Instance instance_ = nullptr;
   Adapter adapter_ = nullptr;
@@ -34,28 +35,36 @@ class Renderer {
   RenderPipeline render_pipeline_ = nullptr;
   ComputePipeline compute_pipeline_ = nullptr;
   BindGroup bind_group_ = nullptr;
+  uint32_t buffer_size_;
   Buffer uniform_buffer_ = nullptr;
   Buffer input_buffer_ = nullptr;
   Buffer output_buffer_ = nullptr;
+  Buffer map_buffer_ = nullptr;
 };
 
 /// \brief Initialize function
+/// \param hasWindow Uses window by glfw if true
 /// \return whether properly initialized
-inline bool Renderer::OnInit() {
-  /// Initialize GLFW
-  if (!glfwInit()) {
-    Error(PrintInfoType::GLFW, "Could not initialize GLFW!");
-    return false;
+inline bool Renderer::OnInit(bool hasWindow) {
+  hasWindow_ = hasWindow;
+  if (hasWindow_) {
+    /// Initialize GLFW
+    if (!glfwInit()) {
+      Error(PrintInfoType::GLFW, "Could not initialize GLFW!");
+      return false;
+    }
+    /// Create Window
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    window_ = glfwCreateWindow(640, 480, "Portracer (_)=---=(_)", NULL, NULL);
   }
-  /// Create Window
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-  window_ = glfwCreateWindow(640, 480, "Portracer (_)=---=(_)", NULL, NULL);
 
+  buffer_size_ = 64 * sizeof(float);
   if (!InitDevice()) return false;
-  InitSwapChain();
+  // InitSwapChain();
   InitBindGroupLayout();
-  InitRenderPipeline();
+  InitComputePipeline();
+  // InitRenderPipeline();
   InitBuffers();
   InitBindGroup();
   return true;
@@ -77,8 +86,13 @@ inline bool Renderer::InitDevice() {
   /// Get WebGPU adapter
   Print(PrintInfoType::WebGPU, "Requesting adapter ...");
   RequestAdapterOptions adapter_options = {};
-  surface_ = glfwGetWGPUSurface(instance_, window_);
-  adapter_options.compatibleSurface = surface_;
+  if (hasWindow_) {
+    surface_ = glfwGetWGPUSurface(instance_, window_);
+    adapter_options.compatibleSurface = surface_;
+    Print(PrintInfoType::WebGPU, "Got surface:", surface_);
+  } else {
+    adapter_options.compatibleSurface = nullptr;
+  }
   adapter_ = instance_.requestAdapter(adapter_options);
   Print(PrintInfoType::WebGPU, "Got adapter:", adapter_);
 
@@ -90,11 +104,18 @@ inline bool Renderer::InitDevice() {
   Print(PrintInfoType::WebGPU, "Requesting device ...");
   // Setting up required limits
   RequiredLimits requiredLimits = Default;
-  requiredLimits.limits.maxBindGroups = 1;
+  requiredLimits.limits.maxBindGroups = 2;
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
   requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
   // Without this, wgpu-native crashes
-  requiredLimits.limits.maxBufferSize = 15 * 5 * sizeof(float);
+  requiredLimits.limits.maxBufferSize = buffer_size_;
+  requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
+  requiredLimits.limits.maxStorageBufferBindingSize = buffer_size_;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 32;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 1;
+  requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
+  requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 32;
+  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 2;
   // This must be set even if we do not use storage buffers for now
   requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
   // This must be set even if we do not use uniform buffers for now
@@ -110,12 +131,17 @@ inline bool Renderer::InitDevice() {
 
   // Error handling
   device_.setUncapturedErrorCallback(OnDeviceError);
+  // Device lost callback
+  wgpuDeviceSetDeviceLostCallback(device_, [](WGPUDeviceLostReason reason, char const *message, void *) {
+    Print(PrintInfoType::WebGPU, "Device lost! Reason: ", reason);
+    Print(PrintInfoType::WebGPU, "Device lost! message: ", message);
+  }, nullptr);
+
 
   /// Get device queue
   queue_ = device_.getQueue();
   #ifdef WEBGPU_BACKEND_DAWN
-  // signalValue is 0 for now
-  queue_.onSubmittedWorkDone(0, OnQueueWorkDone);
+  instance_.processEvents();
   #endif
   return true;
 }
@@ -142,17 +168,23 @@ inline void Renderer::InitSwapChain() {
 
 /// \brief WebGPU BindGroupLayout
 inline void Renderer::InitBindGroupLayout() {
-  /// Create binding layout
-  BindGroupLayoutEntry binding_layout = Default;
-  binding_layout.binding = 0;
-  binding_layout.visibility = ShaderStage::Fragment;
-  // We change here if we want to bind texture or samplers
-  binding_layout.buffer.type = BufferBindingType::Uniform;
-  binding_layout.buffer.minBindingSize = sizeof(float);
+  Print(PrintInfoType::WebGPU, "Create bind group layout ...");
+  std::vector<BindGroupLayoutEntry> bindings(2, Default);
+
+  // Input buffer
+  bindings[0].binding = 0;
+  bindings[0].buffer.type = BufferBindingType::ReadOnlyStorage;
+  bindings[0].visibility = ShaderStage::Compute;
+
+  // Output buffer
+  bindings[1].binding = 1;
+  bindings[1].buffer.type = BufferBindingType::Storage;
+  bindings[1].visibility = ShaderStage::Compute;
+
   /// Create a bind group layout
   BindGroupLayoutDescriptor bind_group_layout_desc{};
-  bind_group_layout_desc.entryCount = 1;
-  bind_group_layout_desc.entries = &binding_layout;
+  bind_group_layout_desc.entryCount = (uint32_t) bindings.size();
+  bind_group_layout_desc.entries = bindings.data();
   bind_group_layout_ = device_.createBindGroupLayout(bind_group_layout_desc);
 }
 
@@ -214,8 +246,8 @@ inline void Renderer::InitRenderPipeline() {
   PipelineLayoutDescriptor layout_desc{};
   layout_desc.bindGroupLayoutCount = 1;
   layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) &bind_group_layout_;
-  PipelineLayout layout = device_.createPipelineLayout(layout_desc);
-  pipeline_desc.layout = layout;
+  pipeline_layout_ = device_.createPipelineLayout(layout_desc);
+  pipeline_desc.layout = pipeline_layout_;
   /// Create a render pipeline
   render_pipeline_ = device_.createRenderPipeline(pipeline_desc);
   Print(PrintInfoType::WebGPU, "Render pipeline: ", render_pipeline_);
@@ -226,22 +258,22 @@ inline void Renderer::InitComputePipeline() {
   Print(PrintInfoType::WebGPU, "Creating compute pipeline ...");
   /// Shader source
   Print(PrintInfoType::WebGPU, "Creating shader module ...");
-  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/triangle.wgsl", device_);
+  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/compute-sample.wgsl", device_);
   Print(PrintInfoType::WebGPU, "Shader module: ", shader_module);
 
   /// Create a pipeline layout
   PipelineLayoutDescriptor layout_desc{};
   layout_desc.bindGroupLayoutCount = 1;
   layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) &bind_group_layout_;
-  PipelineLayout layout = device_.createPipelineLayout(layout_desc);
+  pipeline_layout_ = device_.createPipelineLayout(layout_desc);
 
   /// Compute pipeline setup
   ComputePipelineDescriptor pipeline_desc;
   pipeline_desc.compute.constantCount = 0;
   pipeline_desc.compute.constants = nullptr;
-  pipeline_desc.compute.entryPoint = "ComputeShader";
+  pipeline_desc.compute.entryPoint = "compute_sample";
   pipeline_desc.compute.module = shader_module;
-  pipeline_desc.layout = layout;
+  pipeline_desc.layout = pipeline_layout_;
   /// Create a compute pipeline
   compute_pipeline_ = device_.createComputePipeline(pipeline_desc);
   Print(PrintInfoType::WebGPU, "Compute pipeline: ", compute_pipeline_);
@@ -249,49 +281,127 @@ inline void Renderer::InitComputePipeline() {
 
 /// \brief WebGPU Buffer setup
 inline void Renderer::InitBuffers() {
+  Print(PrintInfoType::WebGPU, "Creating buffers ...");
   BufferDescriptor buffer_desc{};
-  /// Create uniform buffer
-  buffer_desc.size = sizeof(float);
-  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
   buffer_desc.mappedAtCreation = false;
-  uniform_buffer_ = device_.createBuffer(buffer_desc);
-  float is_wgpu_native = 0.0f;
-  #ifdef WEBGPU_BACKEND_WGPU
-  is_wgpu_native = 1.0f;
-  #endif
-  queue_.writeBuffer(uniform_buffer_, 0, &is_wgpu_native, buffer_desc.size);
+  /// Create input buffer
+  buffer_desc.size = buffer_size_;
+  buffer_desc.usage = BufferUsage::Storage | BufferUsage::CopyDst;
+  input_buffer_ = device_.createBuffer(buffer_desc);
+  Print(PrintInfoType::WebGPU, "Input buffer: ", input_buffer_);
+  /// Create output buffer
+  buffer_desc.usage = BufferUsage::Storage | BufferUsage::CopySrc;
+  output_buffer_ = device_.createBuffer(buffer_desc);
+  Print(PrintInfoType::WebGPU, "Output buffer: ", output_buffer_);
+  /// Create map buffer
+  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::MapRead;
+  map_buffer_ = device_.createBuffer(buffer_desc);
+  Print(PrintInfoType::WebGPU, "Map buffer: ", map_buffer_);
+  /// Create uniform buffer
+  // uncomment when needed
+//  buffer_desc.size = sizeof(float);
+//  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
+//  uniform_buffer_ = device_.createBuffer(buffer_desc);
+//  float is_wgpu_native = 0.0f;
+//  #ifdef WEBGPU_BACKEND_WGPU
+//  is_wgpu_native = 1.0f;
+//  #endif
+//  queue_.writeBuffer(uniform_buffer_, 0, &is_wgpu_native, buffer_desc.size);
 }
 
 /// \brief WebGPU BindGroup setup
 inline void Renderer::InitBindGroup() {
+  Print(PrintInfoType::WebGPU, "Creating bind group ...");
   /// Create a binding
-  BindGroupEntry binding{};
-  binding.binding = 0;
-  binding.buffer = uniform_buffer_;
-  // We set the offset to hold multiple uniform blocks
-  binding.offset = 0;
-  binding.size = sizeof(float);
-  BindGroupDescriptor bind_group_desc{};
+  std::vector<BindGroupEntry> entries(2, Default);
+
+  /// Input buffer
+  entries[0].binding = 0;
+  entries[0].buffer = input_buffer_;
+  entries[0].offset = 0;
+  entries[0].size = buffer_size_;
+  /// Output buffer
+  entries[1].binding = 1;
+  entries[1].buffer = output_buffer_;
+  entries[1].offset = 0;
+  entries[1].size = buffer_size_;
+
+  BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = bind_group_layout_;
-  bind_group_desc.entryCount = 1;
-  bind_group_desc.entries = &binding;
+  bind_group_desc.entryCount = (uint32_t) entries.size();
+  bind_group_desc.entries = (WGPUBindGroupEntry *) entries.data();
   bind_group_ = device_.createBindGroup(bind_group_desc);
+  Print(PrintInfoType::WebGPU, "Bind group: ", bind_group_);
 }
 
 /// \brief Compute pass
 inline void Renderer::OnCompute() {
+  Print(PrintInfoType::Portracer, "Running compute pass ...");
+  /// Input buffer
+  std::vector<float> input(buffer_size_ / sizeof(float));
+  for (int i = 0; i < (int) input.size(); ++i) {
+    input[i] = 0.1f * (float) i;
+  }
+  queue_.writeBuffer(input_buffer_, 0, input.data(), input.size() * sizeof(float));
+
   // Initialize a command encoder
   CommandEncoderDescriptor encoder_desc = Default;
   CommandEncoder encoder = device_.createCommandEncoder(encoder_desc);
 
-  // Create and use compute pass
+  // Create compute pass
+  ComputePassDescriptor compute_pass_desc;
+  compute_pass_desc.timestampWriteCount = 0;
+  compute_pass_desc.timestampWrites = nullptr;
+  ComputePassEncoder compute_pass = encoder.beginComputePass(compute_pass_desc);
+
+  // Use compute pass
+  compute_pass.setPipeline(compute_pipeline_);
+  compute_pass.setBindGroup(0, bind_group_, 0, nullptr);
+
+  uint32_t invocation_count = buffer_size_ / sizeof(float);
+  uint32_t workgroup_size = 32;
+  uint32_t workgroup_count = (invocation_count + workgroup_size - 1) / workgroup_size;
+  compute_pass.dispatchWorkgroups(workgroup_count, 1, 1);
+
+  // Finalize compute pass
+  compute_pass.end();
+
+  // Before encoder.finish
+  encoder.copyBufferToBuffer(output_buffer_, 0, map_buffer_, 0, buffer_size_);
+
   // Encode and submit the GPU commands
   CommandBuffer commands = encoder.finish(CommandBufferDescriptor{});
   queue_.submit(commands);
+
+  // Print output
+  bool is_computing = true;
+  auto handle = map_buffer_.mapAsync(MapMode::Read, 0, buffer_size_, [&](BufferMapAsyncStatus status) {
+    if (status == BufferMapAsyncStatus::Success) {
+      const float *output = (const float *) map_buffer_.getConstMappedRange(0, buffer_size_);
+      for (int i = 0; i < (int) input.size(); ++i) {
+        Print(PrintInfoType::Portracer, "input ", input[i]);
+        Print(PrintInfoType::Portracer, "output ", output[i]);
+      }
+      map_buffer_.unmap();
+    }
+    is_computing = false;
+    Print(PrintInfoType::Portracer, "Compute pass finished");
+  });
+
+  while (is_computing) {
+#ifdef WEBGPU_BACKEND_WGPU
+    queue_.submit(0, nullptr);
+#else
+    instance_.processEvents();
+#endif
+  }
+
   // Clean up
 #ifdef WEBGPU_BACKEND_DAWN
   commands.release();
   encoder.release();
+  compute_pass.release();
+  queue_.release();
 #endif
 }
 
@@ -351,34 +461,41 @@ inline void Renderer::OnFrame() {
 /// \brief Called on application quit
 inline void Renderer::OnFinish() {
   /// WebGPU stuff
-  // Release WebGPU bind group
+  /// Release WebGPU bind group
   bind_group_.release();
-  // Release WebGPU buffer
-  uniform_buffer_.destroy();
+  /// Release WebGPU buffer
+  // uniform_buffer_.destroy();
+  // uniform_buffer_.release();
   input_buffer_.destroy();
+  input_buffer_.release();
   output_buffer_.destroy();
-  // Release WebGPU pipelines
-  render_pipeline_.release();
+  output_buffer_.release();
+  map_buffer_.destroy();
+  map_buffer_.release();
+  /// Release WebGPU pipelines
+  // render_pipeline_.release();
   compute_pipeline_.release();
   pipeline_layout_.release();
-  // Release WebGPU bind group layout
+  /// Release WebGPU bind group layout
   bind_group_layout_.release();
-  // Release WebGPU swap chain
-  swap_chain_.release();
-  // Release WebGPU device
+  /// Release WebGPU swap chain
+  // swap_chain_.release();
+  /// Release WebGPU device
   device_.release();
-  // Release WebGPU surface
-  surface_.release();
-  // Release WebGPU adapter
+  /// Release WebGPU surface
+  // surface_.release();
+  /// Release WebGPU adapter
   adapter_.release();
-  // Release WebGPU instance
+  /// Release WebGPU instance
   instance_.release();
 
   /// GLFW stuff
-  // Destroy the Window
-  glfwDestroyWindow(window_);
-  // Terminate GLFW
-  glfwTerminate();
+  if (hasWindow_) {
+    // Destroy the Window
+    glfwDestroyWindow(window_);
+    // Terminate GLFW
+    glfwTerminate();
+  }
 }
 
 /// \brief Check if the renderer is running
