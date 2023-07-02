@@ -13,6 +13,8 @@ class Renderer {
 
  private:
   bool InitDevice();
+  void InitTexture();
+  void InitTextureViews();
   void InitSwapChain();
   void InitBindGroupLayout();
   void InitRenderPipeline();
@@ -21,6 +23,8 @@ class Renderer {
   void InitBindGroup();
 
  private:
+  static const uint32_t WIDTH = 640;
+  static const uint32_t HEIGHT = 480;
   bool hasWindow_ = false;
   GLFWwindow *window_ = nullptr;
   Instance instance_ = nullptr;
@@ -30,6 +34,9 @@ class Renderer {
   Queue queue_ = nullptr;
   SwapChain swap_chain_ = nullptr;
   TextureFormat swap_chain_format_ = TextureFormat::Undefined;
+  Texture texture_ = nullptr;
+  Extent3D texture_size_ = {WIDTH, HEIGHT, 1};
+  TextureView output_texture_view_ = nullptr;
   BindGroupLayout bind_group_layout_ = nullptr;
   PipelineLayout pipeline_layout_ = nullptr;
   RenderPipeline render_pipeline_ = nullptr;

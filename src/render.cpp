@@ -14,11 +14,13 @@ bool Renderer::OnInit(bool hasWindow) {
     /// Create Window
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    window_ = glfwCreateWindow(640, 480, "Portracer (_)=---=(_)", NULL, NULL);
+    window_ = glfwCreateWindow(WIDTH, HEIGHT, "Portracer (_)=---=(_)", NULL, NULL);
   }
 
   buffer_size_ = 64 * sizeof(float);
   if (!InitDevice()) return false;
+  InitTexture();
+  InitTextureViews();
   // InitSwapChain();
   InitBindGroupLayout();
   InitComputePipeline();
@@ -67,6 +69,11 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
   // Without this, wgpu-native crashes
   requiredLimits.limits.maxBufferSize = buffer_size_;
+  requiredLimits.limits.maxTextureDimension1D = 4096;
+  requiredLimits.limits.maxTextureDimension2D = 4096;
+  // Cannot be 4096 on local macOS (wgpu-native)
+  requiredLimits.limits.maxTextureDimension3D = 2048;
+  requiredLimits.limits.maxTextureArrayLayers = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
   requiredLimits.limits.maxStorageBufferBindingSize = buffer_size_;
   requiredLimits.limits.maxComputeWorkgroupSizeX = 32;
@@ -102,6 +109,39 @@ bool Renderer::InitDevice() {
   instance_.processEvents();
   #endif
   return true;
+}
+
+/// \brief Texture setup
+void Renderer::InitTexture() {
+  Print(PrintInfoType::WebGPU, "Creating texture ...");
+  TextureDescriptor textureDesc;
+  textureDesc.dimension = TextureDimension::_2D;
+  textureDesc.format = TextureFormat::RGBA8Unorm;
+  textureDesc.size = texture_size_;
+  textureDesc.sampleCount = 1;
+  textureDesc.viewFormatCount = 0;
+  textureDesc.viewFormats = nullptr;
+  // For saving output data
+  textureDesc.usage = TextureUsage::CopySrc;
+  textureDesc.mipLevelCount = 1;
+  texture_ = device_.createTexture(textureDesc);
+  Print(PrintInfoType::WebGPU, "Got texture: ", texture_);
+}
+
+/// \brief WebGPU input/output Texture View setup
+void Renderer::InitTextureViews() {
+  Print(PrintInfoType::WebGPU, "Creating texture view ...");
+  TextureViewDescriptor texture_view_desc;
+  texture_view_desc.aspect = TextureAspect::All;
+  texture_view_desc.baseArrayLayer = 0;
+  texture_view_desc.arrayLayerCount = 1;
+  texture_view_desc.dimension = TextureViewDimension::_2D;
+  texture_view_desc.format = TextureFormat::RGBA8Unorm;
+  texture_view_desc.mipLevelCount = 1;
+  texture_view_desc.baseMipLevel = 0;
+  texture_view_desc.label = "Output View";
+  output_texture_view_ = texture_.createView(texture_view_desc);
+  Print(PrintInfoType::WebGPU, "Got texture view: ", output_texture_view_);
 }
 
 /// \brief WebGPU SwapChain setup
