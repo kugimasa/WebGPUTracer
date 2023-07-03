@@ -21,6 +21,9 @@ add_executable(Portracer
                src/utils/print_util.h
                external/implementation.cpp)
 
+include_directories("external/stb")
+include_directories("external/tinyobjloader")
+
 if (DEV_MODE)
     target_compile_definitions(Portracer PRIVATE
                                RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
