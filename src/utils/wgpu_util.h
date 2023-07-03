@@ -32,8 +32,8 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <webgpu/webgpu.hpp>
 #include "print_util.h"
-#include "webgpu/webgpu.hpp"
 using namespace wgpu;
 namespace fs = std::filesystem;
 // Dawn and wgpu-native do not agree yet on the lifetime management

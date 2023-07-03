@@ -1,4 +1,5 @@
 #include "include/renderer.h"
+#include "utils/save_texture.h"
 
 /// \brief Initialize function
 /// \param hasWindow Uses window by glfw if true
@@ -76,10 +77,10 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxTextureArrayLayers = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
   requiredLimits.limits.maxStorageBufferBindingSize = buffer_size_;
-  requiredLimits.limits.maxComputeWorkgroupSizeX = 32;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 1;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 8;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 8;
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
-  requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 32;
+  requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
   requiredLimits.limits.maxComputeWorkgroupsPerDimension = 2;
   // This must be set even if we do not use storage buffers for now
   requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
@@ -121,8 +122,8 @@ void Renderer::InitTexture() {
   textureDesc.sampleCount = 1;
   textureDesc.viewFormatCount = 0;
   textureDesc.viewFormats = nullptr;
-  // For saving output data
-  textureDesc.usage = TextureUsage::CopySrc;
+  textureDesc.usage = TextureUsage::StorageBinding | // Writing texture in shader
+      TextureUsage::CopySrc;         // Saving output data
   textureDesc.mipLevelCount = 1;
   texture_ = device_.createTexture(textureDesc);
   Print(PrintInfoType::WebGPU, "Got texture: ", texture_);
@@ -175,8 +176,13 @@ void Renderer::InitBindGroupLayout() {
   bindings[0].visibility = ShaderStage::Compute;
 
   // Output buffer
+//  bindings[1].binding = 1;
+//  bindings[1].buffer.type = BufferBindingType::Storage;
+//  bindings[1].visibility = ShaderStage::Compute;
   bindings[1].binding = 1;
-  bindings[1].buffer.type = BufferBindingType::Storage;
+  bindings[1].storageTexture.access = StorageTextureAccess::WriteOnly;
+  bindings[1].storageTexture.format = TextureFormat::RGBA8Unorm;
+  bindings[1].storageTexture.viewDimension = TextureViewDimension::_2D;
   bindings[1].visibility = ShaderStage::Compute;
 
   /// Create a bind group layout
@@ -292,9 +298,10 @@ void Renderer::InitBuffers() {
   output_buffer_ = device_.createBuffer(buffer_desc);
   Print(PrintInfoType::WebGPU, "Output buffer: ", output_buffer_);
   /// Create map buffer
-  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::MapRead;
-  map_buffer_ = device_.createBuffer(buffer_desc);
-  Print(PrintInfoType::WebGPU, "Map buffer: ", map_buffer_);
+  // uncomment when needed
+//  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::MapRead;
+//  map_buffer_ = device_.createBuffer(buffer_desc);
+//  Print(PrintInfoType::WebGPU, "Map buffer: ", map_buffer_);
   /// Create uniform buffer
   // uncomment when needed
 //  buffer_desc.size = sizeof(float);
@@ -320,9 +327,10 @@ void Renderer::InitBindGroup() {
   entries[0].size = buffer_size_;
   /// Output buffer
   entries[1].binding = 1;
-  entries[1].buffer = output_buffer_;
-  entries[1].offset = 0;
-  entries[1].size = buffer_size_;
+//  entries[1].buffer = output_buffer_;
+//  entries[1].offset = 0;
+//  entries[1].size = buffer_size_;
+  entries[1].textureView = output_texture_view_;
 
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = bind_group_layout_;
@@ -356,43 +364,23 @@ void Renderer::OnCompute() {
   compute_pass.setPipeline(compute_pipeline_);
   compute_pass.setBindGroup(0, bind_group_, 0, nullptr);
 
-  uint32_t invocation_count = buffer_size_ / sizeof(float);
-  uint32_t workgroup_size = 32;
-  uint32_t workgroup_count = (invocation_count + workgroup_size - 1) / workgroup_size;
-  compute_pass.dispatchWorkgroups(workgroup_count, 1, 1);
+  uint32_t invocation_count_x = texture_size_.width / 2;
+  uint32_t invocation_count_y = texture_size_.height / 2;
+  uint32_t workgroup_size_per_dim = 8;
+  // This ceils invocationCountX / workgroupSizePerDim
+  uint32_t workgroup_count_x = (invocation_count_x + workgroup_size_per_dim - 1) / workgroup_size_per_dim;
+  uint32_t workgroup_count_y = (invocation_count_y + workgroup_size_per_dim - 1) / workgroup_size_per_dim;
+  compute_pass.dispatchWorkgroups(workgroup_count_x, workgroup_count_y, 1);
 
   // Finalize compute pass
   compute_pass.end();
-
-  // Before encoder.finish
-  encoder.copyBufferToBuffer(output_buffer_, 0, map_buffer_, 0, buffer_size_);
 
   // Encode and submit the GPU commands
   CommandBuffer commands = encoder.finish(CommandBufferDescriptor{});
   queue_.submit(commands);
 
-  // Print output
-  bool is_computing = true;
-  auto handle = map_buffer_.mapAsync(MapMode::Read, 0, buffer_size_, [&](BufferMapAsyncStatus status) {
-    if (status == BufferMapAsyncStatus::Success) {
-      const float *output = (const float *) map_buffer_.getConstMappedRange(0, buffer_size_);
-      for (int i = 0; i < (int) input.size(); ++i) {
-        Print(PrintInfoType::Portracer, "input ", input[i]);
-        Print(PrintInfoType::Portracer, "output ", output[i]);
-      }
-      map_buffer_.unmap();
-    }
-    is_computing = false;
-    Print(PrintInfoType::Portracer, "Compute pass finished");
-  });
-
-  while (is_computing) {
-#ifdef WEBGPU_BACKEND_WGPU
-    queue_.submit(0, nullptr);
-#else
-    instance_.processEvents();
-#endif
-  }
+  // Save image
+  saveTexture(OUTPUT_DIR "/output.png", device_, texture_, 0 /* output MIP level */);
 
   // Clean up
 #ifdef WEBGPU_BACKEND_DAWN
@@ -461,15 +449,20 @@ void Renderer::OnFinish() {
   /// WebGPU stuff
   /// Release WebGPU bind group
   bind_group_.release();
+  /// Release WebGPU texture views
+  output_texture_view_.release();
+  /// Release WebGPU texture
+  texture_.destroy();
+  texture_.release();
   /// Release WebGPU buffer
   // uniform_buffer_.destroy();
   // uniform_buffer_.release();
   input_buffer_.destroy();
   input_buffer_.release();
-  output_buffer_.destroy();
-  output_buffer_.release();
-  map_buffer_.destroy();
-  map_buffer_.release();
+  // output_buffer_.destroy();
+  // output_buffer_.release();
+  // map_buffer_.destroy();
+  // map_buffer_.release();
   /// Release WebGPU pipelines
   // render_pipeline_.release();
   compute_pipeline_.release();
