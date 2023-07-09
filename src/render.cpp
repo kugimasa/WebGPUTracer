@@ -18,7 +18,11 @@ bool Renderer::OnInit(bool hasWindow) {
     window_ = glfwCreateWindow(WIDTH, HEIGHT, "Portracer (_)=---=(_)", NULL, NULL);
   }
 
-  buffer_size_ = 64 * sizeof(float);
+  buffer_size_ = 64 * sizeof(float);   // seed
+  uniform_buffer_size_ = 0 +
+                         sizeof(float) * 16 + // mvp
+                         sizeof(float) * 16 + // inv_mvp
+                         sizeof(float) * 4;   // seed
   if (!InitDevice()) return false;
   InitTexture();
   InitTextureViews();
@@ -78,11 +82,11 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
   requiredLimits.limits.maxStorageBufferBindingSize = buffer_size_;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
-  requiredLimits.limits.maxComputeWorkgroupSizeX = 40;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 30;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 60;
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
-  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 40;
+  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 80;
   // This must be set even if we do not use storage buffers for now
   requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
   // This must be set even if we do not use uniform buffers for now
@@ -179,9 +183,6 @@ void Renderer::InitBindGroupLayout() {
   bindings[0].visibility = ShaderStage::Compute;
 
   // Output buffer
-//  bindings[1].binding = 1;
-//  bindings[1].buffer.type = BufferBindingType::Storage;
-//  bindings[1].visibility = ShaderStage::Compute;
   bindings[1].binding = 1;
   bindings[1].storageTexture.access = StorageTextureAccess::WriteOnly;
   bindings[1].storageTexture.format = TextureFormat::RGBA8Unorm;
@@ -306,10 +307,9 @@ void Renderer::InitBuffers() {
 //  map_buffer_ = device_.createBuffer(buffer_desc);
 //  Print(PrintInfoType::WebGPU, "Map buffer: ", map_buffer_);
   /// Create uniform buffer
-  // uncomment when needed
-//  buffer_desc.size = sizeof(float);
-//  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
-//  uniform_buffer_ = device_.createBuffer(buffer_desc);
+  buffer_desc.size = uniform_buffer_size_;
+  buffer_desc.usage = BufferUsage::Uniform | BufferUsage::CopyDst;
+  uniform_buffer_ = device_.createBuffer(buffer_desc);
 //  float is_wgpu_native = 0.0f;
 //  #ifdef WEBGPU_BACKEND_WGPU
 //  is_wgpu_native = 1.0f;
@@ -330,9 +330,6 @@ void Renderer::InitBindGroup() {
   entries[0].size = buffer_size_;
   /// Output buffer
   entries[1].binding = 1;
-//  entries[1].buffer = output_buffer_;
-//  entries[1].offset = 0;
-//  entries[1].size = buffer_size_;
   entries[1].textureView = output_texture_view_;
 
   BindGroupDescriptor bind_group_desc;
@@ -367,8 +364,8 @@ void Renderer::OnCompute() {
   compute_pass.setPipeline(compute_pipeline_);
   compute_pass.setBindGroup(0, bind_group_, 0, nullptr);
 
-  uint32_t invocation_count_x = texture_size_.width / 2;
-  uint32_t invocation_count_y = texture_size_.height / 2;
+  uint32_t invocation_count_x = texture_size_.width;
+  uint32_t invocation_count_y = texture_size_.height;
   uint32_t workgroup_size_per_dim = 8;
   // This ceils invocationCountX / workgroupSizePerDim
   uint32_t workgroup_count_x = (invocation_count_x + workgroup_size_per_dim - 1) / workgroup_size_per_dim;
