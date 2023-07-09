@@ -54,17 +54,19 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
   bool done = false;
   bool success = false;
   auto callbackHandle = pixelBuffer.mapAsync(MapMode::Read, 0, pixelBufferDesc.size, [&](BufferMapAsyncStatus status) {
-    if (status != BufferMapAsyncStatus::Success) {
-      success = false;
-    } else {
-      const unsigned char *pixelData = (const unsigned char *) pixelBuffer.getConstMappedRange(0, pixelBufferDesc.size);
-      int writeSuccess = stbi_write_png(path.string().c_str(), (int) width, (int) height, (int) channels, pixelData, paddedBytesPerRow);
+      if (status != BufferMapAsyncStatus::Success) {
+        success = false;
+      } else {
+        const unsigned char *pixelData = (const unsigned char *) pixelBuffer.getConstMappedRange(0,
+                                                                                                 pixelBufferDesc.size);
+        int writeSuccess = stbi_write_png(path.string().c_str(), (int) width, (int) height, (int) channels, pixelData,
+                                          paddedBytesPerRow);
 
-      pixelBuffer.unmap();
+        pixelBuffer.unmap();
 
-      success = writeSuccess != 0;
-    }
-    done = true;
+        success = writeSuccess != 0;
+      }
+      done = true;
   });
 
   // Wait for mapping
@@ -77,17 +79,11 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
   }
 
   // Clean-up
-
   pixelBuffer.destroy();
-
-#ifdef WEBGPU_BACKEND_WGPU
-  wgpuBufferDrop(pixelBuffer);
-#else
   wgpuBufferRelease(pixelBuffer);
   wgpuCommandEncoderRelease(encoder);
   wgpuCommandBufferRelease(command);
   wgpuQueueRelease(queue);
-#endif
   Print(PrintInfoType::Portracer, "Image saved!");
   return success;
 }

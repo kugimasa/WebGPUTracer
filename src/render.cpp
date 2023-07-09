@@ -97,18 +97,20 @@ bool Renderer::InitDevice() {
 
   // Error handling
   device_.setUncapturedErrorCallback(OnDeviceError);
+#ifdef WEBGPU_BACKEND_DAWN
   // Device lost callback
   wgpuDeviceSetDeviceLostCallback(device_, [](WGPUDeviceLostReason reason, char const *message, void *) {
     Print(PrintInfoType::WebGPU, "Device lost! Reason: ", reason);
     Print(PrintInfoType::WebGPU, "Device lost! message: ", message);
   }, nullptr);
+#endif
 
 
   /// Get device queue
   queue_ = device_.getQueue();
-  #ifdef WEBGPU_BACKEND_DAWN
+#ifdef WEBGPU_BACKEND_DAWN
   instance_.processEvents();
-  #endif
+#endif
   return true;
 }
 
@@ -123,7 +125,7 @@ void Renderer::InitTexture() {
   textureDesc.viewFormatCount = 0;
   textureDesc.viewFormats = nullptr;
   textureDesc.usage = TextureUsage::StorageBinding | // Writing texture in shader
-      TextureUsage::CopySrc;         // Saving output data
+                      TextureUsage::CopySrc;         // Saving output data
   textureDesc.mipLevelCount = 1;
   texture_ = device_.createTexture(textureDesc);
   Print(PrintInfoType::WebGPU, "Got texture: ", texture_);
@@ -152,13 +154,13 @@ void Renderer::InitSwapChain() {
   swap_chain_desc.width = 640;
   swap_chain_desc.height = 480;
   /// Texture format
-  #ifdef WEBGPU_BACKEND_WGPU
+#ifdef WEBGPU_BACKEND_WGPU
   swap_chain_format_ = surface_.getPreferredFormat(adapter_);
   swap_chain_desc.format = swap_chain_format_;
-  #else
+#else
   // For Dawn BGRA8Unorm only
   swap_chain_desc.format = TextureFormat::BGRA8Unorm;
-  #endif
+#endif
   swap_chain_desc.usage = TextureUsage::RenderAttachment;
   swap_chain_desc.presentMode = PresentMode::Fifo;
   swap_chain_ = device_.createSwapChain(surface_, swap_chain_desc);
@@ -232,12 +234,12 @@ void Renderer::InitRenderPipeline() {
   blend_state.alpha.dstFactor = BlendFactor::One;
   blend_state.alpha.operation = BlendOperation::Add;
   ColorTargetState color_target;
-  #ifdef WEBGPU_BACKEND_WGPU
+#ifdef WEBGPU_BACKEND_WGPU
   color_target.format = swap_chain_format_;
-  #else
+#else
   // For Dawn BGRA8Unorm only
   color_target.format = TextureFormat::BGRA8Unorm;
-  #endif
+#endif
   color_target.blend = &blend_state;
   color_target.writeMask = ColorWriteMask::All;
   fragment_state.targetCount = 1;
@@ -383,12 +385,10 @@ void Renderer::OnCompute() {
   saveTexture(OUTPUT_DIR "/output.png", device_, texture_, 0 /* output MIP level */);
 
   // Clean up
-#ifdef WEBGPU_BACKEND_DAWN
   commands.release();
   encoder.release();
   compute_pass.release();
   queue_.release();
-#endif
 }
 
 /// \brief Called every frame

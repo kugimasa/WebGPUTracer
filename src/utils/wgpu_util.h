@@ -25,6 +25,7 @@
  */
 
 #pragma once
+
 #include <iostream>
 #include <cassert>
 #include <vector>
@@ -34,6 +35,7 @@
 #include <string>
 #include <webgpu/webgpu.hpp>
 #include "print_util.h"
+
 using namespace wgpu;
 namespace fs = std::filesystem;
 // Dawn and wgpu-native do not agree yet on the lifetime management
@@ -45,29 +47,7 @@ namespace fs = std::filesystem;
 #ifdef WEBGPU_BACKEND_WGPU
 // wgpu-native's non-standard parts are in a different header file:
 #include <webgpu/wgpu.h>
-#define wgpuInstanceRelease wgpuInstanceDrop
-#define wgpuAdapterRelease wgpuAdapterDrop
-#define wgpuBindGroupRelease wgpuBindGroupDrop
-#define wgpuBindGroupLayoutRelease wgpuBindGroupLayoutDrop
-#define wgpuBufferRelease wgpuBufferDrop
-#define wgpuCommandBufferRelease wgpuCommandBufferDrop
-#define wgpuCommandEncoderRelease wgpuCommandEncoderDrop
-#define wgpuRenderPassEncoderRelease wgpuRenderPassEncoderDrop
-#define wgpuComputePassEncoderRelease wgpuComputePassEncoderDrop
-#define wgpuRenderBundleEncoderRelease wgpuRenderBundleEncoderDrop
-#define wgpuComputePipelineRelease wgpuComputePipelineDrop
-#define wgpuDeviceRelease wgpuDeviceDrop
-#define wgpuPipelineLayoutRelease wgpuPipelineLayoutDrop
-#define wgpuQuerySetRelease wgpuQuerySetDrop
-#define wgpuRenderBundleRelease wgpuRenderBundleDrop
-#define wgpuRenderPipelineRelease wgpuRenderPipelineDrop
-#define wgpuSamplerRelease wgpuSamplerDrop
-#define wgpuShaderModuleRelease wgpuShaderModuleDrop
-#define wgpuSurfaceRelease wgpuSurfaceDrop
-#define wgpuSwapChainRelease wgpuSwapChainDrop
-#define wgpuTextureRelease wgpuTextureDrop
-#define wgpuTextureViewRelease wgpuTextureViewDrop
-#define release drop
+
 #endif
 
 ///
@@ -110,15 +90,13 @@ ShaderModule inline LoadShaderModule(const fs::path &path, Device device) {
   ShaderModuleWGSLDescriptor shaderCodeDesc;
   shaderCodeDesc.chain.next = nullptr;
   shaderCodeDesc.chain.sType = SType::ShaderModuleWGSLDescriptor;
+  shaderCodeDesc.code = shaderSource.c_str();
   ShaderModuleDescriptor shaderDesc;
   shaderDesc.nextInChain = &shaderCodeDesc.chain;
 
 #ifdef WEBGPU_BACKEND_WGPU
   shaderDesc.hintCount = 0;
   shaderDesc.hints = nullptr;
-  shaderCodeDesc.code = shaderSource.c_str();
-#else
-  shaderCodeDesc.source = shaderSource.c_str();
 #endif
   return device.createShaderModule(shaderDesc);
 }

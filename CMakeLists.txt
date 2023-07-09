@@ -46,7 +46,6 @@ target_link_libraries(Portracer PRIVATE glfw webgpu glfw3webgpu)
 
 set_target_properties(Portracer PROPERTIES
                       CXX_STANDARD 17
-                      COMPILE_WARNING_AS_ERROR ON
                       )
 # Warning Settings
 if (MSVC)
