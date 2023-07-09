@@ -13,9 +13,9 @@ fn f2(x: f32) -> f32 {
 fn compute_sample(@builtin(global_invocation_id) id: vec3<u32>) {
     let in = inputBuffer[id.x];
     let color = vec4(
-        clamp(f1(in), 0, 1),
-        clamp(f2(in), 0, 1),
-        clamp(in, 0, 1),
+        clamp(f1(in), 0.0, 1.0),
+        clamp(f2(in), 0.0, 1.0),
+        clamp(in, 0.0, 1.0),
         1.0
     );
     textureStore(outputBuffer, id.xy, color);

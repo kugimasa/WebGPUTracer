@@ -69,7 +69,7 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
   requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
   // Without this, wgpu-native crashes
-  requiredLimits.limits.maxBufferSize = buffer_size_;
+  requiredLimits.limits.maxBufferSize = WIDTH * HEIGHT * sizeof(float);
   requiredLimits.limits.maxTextureDimension1D = 4096;
   requiredLimits.limits.maxTextureDimension2D = 4096;
   // Cannot be 4096 on local macOS (wgpu-native)
@@ -77,11 +77,12 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxTextureArrayLayers = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
   requiredLimits.limits.maxStorageBufferBindingSize = buffer_size_;
-  requiredLimits.limits.maxComputeWorkgroupSizeX = 8;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 8;
+  requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 40;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 30;
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
-  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 2;
+  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 40;
   // This must be set even if we do not use storage buffers for now
   requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
   // This must be set even if we do not use uniform buffers for now
