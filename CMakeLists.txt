@@ -16,6 +16,8 @@ add_subdirectory(webgpu)
 add_executable(Portracer
                src/main.cpp
                src/render.cpp
+               src/camera.cpp
+               src/include/camera.h
                src/include/renderer.h
                src/utils/wgpu_util.h
                src/utils/print_util.h

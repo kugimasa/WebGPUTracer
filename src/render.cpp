@@ -1,4 +1,5 @@
 #include "include/renderer.h"
+#include "include/camera.h"
 #include "utils/save_texture.h"
 
 /// \brief Initialize function
@@ -19,10 +20,6 @@ bool Renderer::OnInit(bool hasWindow) {
   }
 
   buffer_size_ = 64 * sizeof(float);   // seed
-  uniform_buffer_size_ = 0 +
-                         sizeof(float) * 16 + // mvp
-                         sizeof(float) * 16 + // inv_mvp
-                         sizeof(float) * 4;   // seed
   if (!InitDevice()) return false;
   InitTexture();
   InitTextureViews();
@@ -105,8 +102,8 @@ bool Renderer::InitDevice() {
 #ifdef WEBGPU_BACKEND_DAWN
   // Device lost callback
   wgpuDeviceSetDeviceLostCallback(device_, [](WGPUDeviceLostReason reason, char const *message, void *) {
-    Print(PrintInfoType::WebGPU, "Device lost! Reason: ", reason);
-    Print(PrintInfoType::WebGPU, "Device lost! message: ", message);
+      Print(PrintInfoType::WebGPU, "Device lost! Reason: ", reason);
+      Print(PrintInfoType::WebGPU, "Device lost! message: ", message);
   }, nullptr);
 #endif
 
@@ -307,9 +304,10 @@ void Renderer::InitBuffers() {
 //  map_buffer_ = device_.createBuffer(buffer_desc);
 //  Print(PrintInfoType::WebGPU, "Map buffer: ", map_buffer_);
   /// Create uniform buffer
-  buffer_desc.size = uniform_buffer_size_;
-  buffer_desc.usage = BufferUsage::Uniform | BufferUsage::CopyDst;
-  uniform_buffer_ = device_.createBuffer(buffer_desc);
+  // uncomment when needed
+//  buffer_desc.size = uniform_buffer_size_;
+//  buffer_desc.usage = BufferUsage::Uniform | BufferUsage::CopyDst;
+//  uniform_buffer_ = device_.createBuffer(buffer_desc);
 //  float is_wgpu_native = 0.0f;
 //  #ifdef WEBGPU_BACKEND_WGPU
 //  is_wgpu_native = 1.0f;

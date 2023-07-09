@@ -56,7 +56,6 @@ private:
     ComputePipeline compute_pipeline_ = nullptr;
     BindGroup bind_group_ = nullptr;
     uint32_t buffer_size_ = 0;
-    uint32_t uniform_buffer_size_ = 0;
     Buffer uniform_buffer_ = nullptr;
     Buffer input_buffer_ = nullptr;
     Buffer output_buffer_ = nullptr;
