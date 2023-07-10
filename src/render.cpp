@@ -68,7 +68,7 @@ bool Renderer::InitDevice() {
   RequiredLimits requiredLimits = Default;
   requiredLimits.limits.maxBindGroups = 2;
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
-  requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
+  requiredLimits.limits.maxUniformBufferBindingSize = 36 * sizeof(float); // mvp(16), inv_mvp(16), seed(4)
   // Without this, wgpu-native crashes
   requiredLimits.limits.maxBufferSize = WIDTH * HEIGHT * sizeof(float);
   requiredLimits.limits.maxTextureDimension1D = 4096;
@@ -107,6 +107,8 @@ bool Renderer::InitDevice() {
   }, nullptr);
 #endif
 
+  /// Init Camera
+  camera_ = Camera(device_);
 
   /// Get device queue
   queue_ = device_.getQueue();
@@ -268,8 +270,9 @@ void Renderer::InitComputePipeline() {
 
   /// Create a pipeline layout
   PipelineLayoutDescriptor layout_desc{};
-  layout_desc.bindGroupLayoutCount = 1;
-  layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) &bind_group_layout_;
+  std::vector<WGPUBindGroupLayout> bind_group_layouts{camera_.GetUniforms().bind_group_layout_, bind_group_layout_};
+  layout_desc.bindGroupLayoutCount = 2;
+  layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) bind_group_layouts.data();
   pipeline_layout_ = device_.createPipelineLayout(layout_desc);
 
   /// Compute pipeline setup
@@ -298,21 +301,6 @@ void Renderer::InitBuffers() {
   buffer_desc.usage = BufferUsage::Storage | BufferUsage::CopySrc;
   output_buffer_ = device_.createBuffer(buffer_desc);
   Print(PrintInfoType::WebGPU, "Output buffer: ", output_buffer_);
-  /// Create map buffer
-  // uncomment when needed
-//  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::MapRead;
-//  map_buffer_ = device_.createBuffer(buffer_desc);
-//  Print(PrintInfoType::WebGPU, "Map buffer: ", map_buffer_);
-  /// Create uniform buffer
-  // uncomment when needed
-//  buffer_desc.size = uniform_buffer_size_;
-//  buffer_desc.usage = BufferUsage::Uniform | BufferUsage::CopyDst;
-//  uniform_buffer_ = device_.createBuffer(buffer_desc);
-//  float is_wgpu_native = 0.0f;
-//  #ifdef WEBGPU_BACKEND_WGPU
-//  is_wgpu_native = 1.0f;
-//  #endif
-//  queue_.writeBuffer(uniform_buffer_, 0, &is_wgpu_native, buffer_desc.size);
 }
 
 /// \brief WebGPU BindGroup setup
@@ -360,7 +348,8 @@ void Renderer::OnCompute() {
 
   // Use compute pass
   compute_pass.setPipeline(compute_pipeline_);
-  compute_pass.setBindGroup(0, bind_group_, 0, nullptr);
+  compute_pass.setBindGroup(0, camera_.GetUniforms().bind_group_, 0, nullptr);
+  compute_pass.setBindGroup(1, bind_group_, 0, nullptr);
 
   uint32_t invocation_count_x = texture_size_.width;
   uint32_t invocation_count_y = texture_size_.height;
@@ -442,6 +431,8 @@ void Renderer::OnFrame() {
 
 /// \brief Called on application quit
 void Renderer::OnFinish() {
+  /// Release Camera
+  camera_.Release();
   /// WebGPU stuff
   /// Release WebGPU bind group
   bind_group_.release();

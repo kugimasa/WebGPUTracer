@@ -4,7 +4,9 @@
 
 class Camera {
 public:
-    Camera(Device device);
+    Camera() = default;
+
+    explicit Camera(Device device);
 
     ~Camera();
 
@@ -16,6 +18,8 @@ public:
     };
 
     Uniforms GetUniforms() { return uniforms_; }
+
+    void Release();
 
 private:
     void InitBindGroupLayout();

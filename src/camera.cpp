@@ -14,6 +14,9 @@ Camera::Camera(Device device) {
 
 /// \brief Destructor
 Camera::~Camera() {
+}
+
+void Camera::Release() {
   uniforms_.bind_group_.release();
   uniform_buffer_.destroy();
   uniform_buffer_.release();

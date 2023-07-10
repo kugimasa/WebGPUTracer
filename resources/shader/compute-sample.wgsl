@@ -1,5 +1,5 @@
-@group(0) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
-@group(0) @binding(1) var outputBuffer: texture_storage_2d<rgba8unorm,write>;
+@group(1) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
+@group(1) @binding(1) var outputBuffer: texture_storage_2d<rgba8unorm,write>;
 
 @compute @workgroup_size(8, 8)
 fn compute_sample(@builtin(global_invocation_id) id: vec3<u32>) {

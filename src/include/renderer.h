@@ -3,6 +3,7 @@
 #include "GLFW/glfw3.h"
 #include "glfw3webgpu.h"
 #include "../utils/wgpu_util.h"
+#include "camera.h"
 
 class Renderer {
 public:
@@ -38,6 +39,7 @@ private:
 private:
     static const uint32_t WIDTH = 640;
     static const uint32_t HEIGHT = 480;
+    Camera camera_{};
     bool hasWindow_ = false;
     GLFWwindow *window_ = nullptr;
     Instance instance_ = nullptr;
