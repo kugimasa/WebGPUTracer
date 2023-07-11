@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../utils/wgpu_util.h"
+#include "utils/wgpu_util.h"
 
 class Camera {
 public:

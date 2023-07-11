@@ -1,5 +1,5 @@
-#include "include/renderer.h"
-#include "include/camera.h"
+#include "renderer.h"
+#include "camera.h"
 #include "utils/save_texture.h"
 
 /// \brief Initialize function

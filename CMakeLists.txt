@@ -17,13 +17,10 @@ add_executable(Portracer
                src/main.cpp
                src/render.cpp
                src/camera.cpp
-               src/include/camera.h
-               src/include/renderer.h
-               src/utils/wgpu_util.h
-               src/utils/print_util.h
-               src/utils/save_texture.h
+               src/objects/quad.cpp
                external/implementation.cpp)
 
+include_directories(src/include)
 include_directories("external/stb")
 include_directories("external/tinyobjloader")
 

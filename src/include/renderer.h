@@ -2,7 +2,7 @@
 
 #include "GLFW/glfw3.h"
 #include "glfw3webgpu.h"
-#include "../utils/wgpu_util.h"
+#include "utils/wgpu_util.h"
 #include "camera.h"
 
 class Renderer {

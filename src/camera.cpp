@@ -1,4 +1,4 @@
-#include "include/camera.h"
+#include "camera.h"
 
 /// \brief Constructor
 /// \param device
