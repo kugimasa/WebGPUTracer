@@ -15,9 +15,10 @@ add_subdirectory(webgpu)
 
 add_executable(Portracer
                src/main.cpp
-               src/render.cpp
                src/camera.cpp
-               src/objects/quad.cpp
+               src/render.cpp
+               src/objects/box.cpp
+               src/objects/cornell_box.cpp
                external/implementation.cpp)
 
 include_directories(src/include)

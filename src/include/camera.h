@@ -6,9 +6,7 @@ class Camera {
 public:
     Camera() = default;
 
-    explicit Camera(Device device);
-
-    ~Camera();
+    explicit Camera(Device &device);
 
     struct Uniforms {
         BindGroupLayout bind_group_layout_;
@@ -22,16 +20,13 @@ public:
     void Release();
 
 private:
-    void InitBindGroupLayout();
+    void InitBindGroupLayout(Device &device);
 
-    void InitBuffers();
+    void InitBuffers(Device &device);
 
-    void InitBindGroup();
+    void InitBindGroup(Device &device);
 
 private:
-
-    Device device_ = nullptr;
-    // TODO: Scene
     uint32_t buffer_size_ = 0;
     Buffer uniform_buffer_ = nullptr;
     Uniforms uniforms_ = {};

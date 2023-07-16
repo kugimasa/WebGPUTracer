@@ -70,6 +70,9 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
   requiredLimits.limits.maxUniformBufferBindingSize = 36 * sizeof(float); // mvp(16), inv_mvp(16), seed(4)
   // Without this, wgpu-native crashes
+  requiredLimits.limits.maxVertexAttributes = 3;
+  requiredLimits.limits.maxVertexBufferArrayStride = 10 * sizeof(float);
+  requiredLimits.limits.maxVertexBuffers = 3;
   requiredLimits.limits.maxBufferSize = WIDTH * HEIGHT * sizeof(float);
   requiredLimits.limits.maxTextureDimension1D = 4096;
   requiredLimits.limits.maxTextureDimension2D = 4096;
@@ -77,7 +80,7 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxTextureDimension3D = 2048;
   requiredLimits.limits.maxTextureArrayLayers = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
-  requiredLimits.limits.maxStorageBufferBindingSize = buffer_size_;
+  requiredLimits.limits.maxStorageBufferBindingSize = 2048;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
   requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
   requiredLimits.limits.maxComputeWorkgroupSizeY = 60;
