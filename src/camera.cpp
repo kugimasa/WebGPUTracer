@@ -74,3 +74,16 @@ void Camera::InitBindGroup(Device &device) {
   bind_group_desc.entries = (WGPUBindGroupEntry *) entries.data();
   uniforms_.bind_group_ = device.createBindGroup(bind_group_desc);
 }
+
+void Camera::Update(Queue &queue, float aspect) {
+  float near = 0.5f;
+  float far = 100.0f;
+  float fovy = (2.0f * M_PI) / 8.0f;
+  auto projection_mat = glm::perspective(fovy, aspect, near, far);
+  auto view_mat = glm::lookAt(vec3(0.0, 5.0, 15.0), vec3(0.0, 5.0, 0.0), vec3(0.0, 1.0, 0.0));
+  auto mvp = projection_mat * view_mat;
+  auto inv_mvp = glm::inverse(mvp);
+  std::array<float, 4> seed{Rand(), Rand(), Rand(), Rand()};
+  CameraUniforms uniforms{mvp, inv_mvp, seed};
+  queue.writeBuffer(uniform_buffer_, 0, &uniforms, sizeof(CameraUniforms));
+}

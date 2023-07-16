@@ -4,10 +4,21 @@
 #include <cstdlib>
 #include <limits>
 #include <memory>
+#include <vector>
+#include <array>
+
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED
+
+#include <glm.hpp>
+#include <ext.hpp>
+
 
 using std::shared_ptr;
 using std::make_shared;
 using std::sqrt;
+using glm::mat4x4;
+using glm::vec3;
 
 constexpr double INF = std::numeric_limits<double>::infinity();
 
@@ -20,6 +31,11 @@ inline double Clamp(double x, double min, double max) {
   if (x < min) return min;
   if (x > max) return max;
   return x;
+}
+
+// [0,1)の値をランダムで返す
+inline float Rand() {
+  return (float) rand() / ((float) RAND_MAX + 1.0f);
 }
 
 // [0,1)の値をランダムで返す

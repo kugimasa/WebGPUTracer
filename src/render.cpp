@@ -332,6 +332,10 @@ void Renderer::InitBindGroup() {
 /// \brief Compute pass
 void Renderer::OnCompute() {
   Print(PrintInfoType::Portracer, "Running compute pass ...");
+
+  /// Update camera
+  camera_.Update(queue_, (float) WIDTH / (float) HEIGHT);
+
   /// Input buffer
   std::vector<float> input(buffer_size_ / sizeof(float));
   for (int i = 0; i < (int) input.size(); ++i) {

@@ -28,7 +28,6 @@
 
 #include <iostream>
 #include <cassert>
-#include <vector>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
