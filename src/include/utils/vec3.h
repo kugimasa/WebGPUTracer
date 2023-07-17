@@ -11,25 +11,25 @@ class Vec3 {
 public:
     Vec3() {}
 
-    Vec3(double e0, double e1, double e2) {
+    Vec3(float e0, float e1, float e2) {
       e_[0] = e0;
       e_[1] = e1;
       e_[2] = e2;
     }
 
-    inline double X() const { return e_[0]; }
+    inline float X() const { return e_[0]; }
 
-    inline double Y() const { return e_[1]; }
+    inline float Y() const { return e_[1]; }
 
-    inline double Z() const { return e_[2]; }
+    inline float Z() const { return e_[2]; }
 
     inline const Vec3 &operator+() const { return *this; }
 
     inline Vec3 operator-() const { return Vec3(-e_[0], -e_[1], -e_[2]); }
 
-    inline double operator[](int i) const { return e_[i]; }
+    inline float operator[](int i) const { return e_[i]; }
 
-    inline double &operator[](int i) { return e_[i]; };
+    inline float &operator[](int i) { return e_[i]; };
 
     inline Vec3 &operator+=(const Vec3 &v2);
 
@@ -39,15 +39,15 @@ public:
 
     inline Vec3 &operator/=(const Vec3 &v2);
 
-    inline Vec3 &operator*=(const double t);
+    inline Vec3 &operator*=(const float t);
 
-    inline Vec3 &operator/=(const double t);
+    inline Vec3 &operator/=(const float t);
 
-    double Length() const {
+    float Length() const {
       return sqrt(e_[0] * e_[0] + e_[1] * e_[1] + e_[2] * e_[2]);
     }
 
-    double SquaredLength() const {
+    float SquaredLength() const {
       return e_[0] * e_[0] + e_[1] * e_[1] + e_[2] * e_[2];
     }
 
@@ -57,14 +57,14 @@ public:
     }
 
     inline static Vec3 Rand() {
-      return Vec3(RandDouble(), RandDouble(), RandDouble());
+      return Vec3(rand(), rand(), rand());
     }
 
-    inline static Vec3 Rand(double min, double max) {
+    inline static Vec3 Rand(float min, float max) {
       return Vec3(RandDouble(min, max), RandDouble(min, max), RandDouble(min, max));
     }
 
-    double e_[3];
+    float e_[3];
 };
 
 inline std::istream &operator>>(std::istream &is, Vec3 &t) {
@@ -93,15 +93,15 @@ inline Vec3 operator/(const Vec3 &v1, const Vec3 &v2) {
   return Vec3(v1.e_[0] / v2.e_[0], v1.e_[1] / v2.e_[1], v1.e_[2] / v2.e_[2]);
 }
 
-inline Vec3 operator*(double t, const Vec3 &v) {
+inline Vec3 operator*(float t, const Vec3 &v) {
   return Vec3(t * v.e_[0], t * v.e_[1], t * v.e_[2]);
 }
 
-inline Vec3 operator/(Vec3 v, double t) {
+inline Vec3 operator/(Vec3 v, float t) {
   return Vec3(v.e_[0] / t, v.e_[1] / t, v.e_[2] / t);
 }
 
-inline Vec3 operator*(const Vec3 &v, double t) {
+inline Vec3 operator*(const Vec3 &v, float t) {
   return Vec3(t * v.e_[0], t * v.e_[1], t * v.e_[2]);
 }
 
@@ -133,15 +133,15 @@ inline Vec3 &Vec3::operator-=(const Vec3 &v) {
   return *this;
 }
 
-inline Vec3 &Vec3::operator*=(const double t) {
+inline Vec3 &Vec3::operator*=(const float t) {
   e_[0] *= t;
   e_[1] *= t;
   e_[2] *= t;
   return *this;
 }
 
-inline Vec3 &Vec3::operator/=(const double t) {
-  double k = 1.0 / t;
+inline Vec3 &Vec3::operator/=(const float t) {
+  float k = 1.0 / t;
 
   e_[0] *= k;
   e_[1] *= k;
@@ -149,7 +149,7 @@ inline Vec3 &Vec3::operator/=(const double t) {
   return *this;
 }
 
-inline double Dot(const Vec3 &v1, const Vec3 &v2) {
+inline float Dot(const Vec3 &v1, const Vec3 &v2) {
   return v1.e_[0] * v2.e_[0] + v1.e_[1] * v2.e_[1] + v1.e_[2] * v2.e_[2];
 }
 
@@ -164,7 +164,7 @@ inline Vec3 Unit(Vec3 v) {
 }
 
 inline Vec3 Inv(Vec3 v) {
-  const double s = 1 / v.SquaredLength();
+  const float s = 1 / v.SquaredLength();
   return v * s;
 }
 

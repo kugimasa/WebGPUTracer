@@ -34,10 +34,13 @@ private:
 private:
     struct Ray {
         Point3 origin;
+        float dummy;
         Point3 target;
+        float dummy1;
         float aspect;
         float time;
         float rand;
+        float dummy2;
 
         Ray(Vec3 origin, Vec3 target, float aspect, float time, float rand) :
                 origin(origin), target(target), aspect(aspect), time(time), rand(rand) {}
@@ -48,6 +51,4 @@ private:
     uint32_t buffer_size_ = 0;
     Buffer uniform_buffer_ = nullptr;
     Uniforms uniforms_ = {};
-    Point3 origin_{0.0, 0.0, 0.0};
-    Point3 target_{0.0, 0.0, 0.0};
 };
