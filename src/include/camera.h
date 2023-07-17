@@ -2,6 +2,7 @@
 
 #include "utils/wgpu_util.h"
 #include "utils/util.h"
+#include "utils/vec3.h"
 
 class Camera {
 public:
@@ -20,7 +21,7 @@ public:
 
     void Release();
 
-    void Update(Queue &queue, float aspect);
+    void Update(Queue &queue, Point3 origin, Point3 target, float aspect, float time);
 
 private:
     void InitBindGroupLayout(Device &device);
@@ -29,17 +30,24 @@ private:
 
     void InitBindGroup(Device &device);
 
-private:
-    struct CameraUniforms {
-        mat4x4 mvp;
-        mat4x4 inv_mvp;
-        std::array<float, 4> seed;
 
-        CameraUniforms(mat4x4 mvp, mat4x4 inv_mvp, std::array<float, 4> seed) :
-                mvp(mvp), inv_mvp(inv_mvp), seed(seed) {}
+private:
+    struct Ray {
+        Point3 origin;
+        Point3 target;
+        float aspect;
+        float time;
+        float rand;
+
+        Ray(Vec3 origin, Vec3 target, float aspect, float time, float rand) :
+                origin(origin), target(target), aspect(aspect), time(time), rand(rand) {}
     };
 
+
+private:
     uint32_t buffer_size_ = 0;
     Buffer uniform_buffer_ = nullptr;
     Uniforms uniforms_ = {};
+    Point3 origin_{0.0, 0.0, 0.0};
+    Point3 target_{0.0, 0.0, 0.0};
 };

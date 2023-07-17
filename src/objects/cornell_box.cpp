@@ -3,15 +3,17 @@
 
 CornellBox::CornellBox(Device &device) {
   /// Initialize Scene
-  Box walls = Box(Vec3(0, 5, 0), Vec3(10, 10, 10), 0, Color3(0.5, 0.0, 0.0), false);
-  Box box1 = Box(Vec3(1.5, 1.5, 1), Vec3(3, 3, 3), 0.3, Color3(0.8, 0.8, 0.8));
-  Box box2 = Box(Vec3(-2, 3, -2), Vec3(3, 6, 3), -0.4, Color3(0.8, 0.8, 0.8));
+//  Box walls = Box(Vec3(0, 5, 0), Vec3(10, 10, 10), 0, Color3(0.5, 0.0, 0.0), false);
+//  Box box1 = Box(Vec3(1.5, 1.5, 1), Vec3(3, 3, 3), 0.3, Color3(0.8, 0.8, 0.8));
+//  Box box2 = Box(Vec3(-2, 3, -2), Vec3(3, 6, 3), -0.4, Color3(0.8, 0.8, 0.8));
+//  Box box = Box(Vec3(0, 0, 5.0), Vec3(3, 3, 3), 0.0, Color3(0.8, 0.8, 0.8), false, false);
   /// Initialize Light
-  Quad light = Quad(Vec3(0, 9.95, 0), Vec3(1, 0, 0), Vec3(0, 0, 1), Color3(5.0, 5.0, 5.0), true);
+  Quad light = Quad(Vec3(0, 0, 9.5), Vec3(1, 0, 0), Vec3(0, 1, 0), Color3(5.0, 5.0, 5.0), true);
   /// Create Quad Buffer
-  walls.PushQuads(quads_);
-  box1.PushQuads(quads_);
-  box2.PushQuads(quads_);
+//  walls.PushQuads(quads_);
+//  box1.PushQuads(quads_);
+//  box2.PushQuads(quads_);
+//  box.PushQuads(quads_);
   quads_.push_back(light);
   const uint32_t quad_stride = 16 * 4;
   BufferDescriptor quad_buffer_desc{};

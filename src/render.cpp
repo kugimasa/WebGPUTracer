@@ -68,7 +68,8 @@ bool Renderer::InitDevice() {
   RequiredLimits requiredLimits = Default;
   requiredLimits.limits.maxBindGroups = 2;
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
-  requiredLimits.limits.maxUniformBufferBindingSize = 36 * sizeof(float); // mvp(16), inv_mvp(16), seed(4)
+  requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
+  // origin(3), target(3), aspect(1), time(1), seed(1)
   // Without this, wgpu-native crashes
   requiredLimits.limits.maxVertexAttributes = 3;
   requiredLimits.limits.maxVertexBufferArrayStride = 10 * sizeof(float);
@@ -334,7 +335,11 @@ void Renderer::OnCompute() {
   Print(PrintInfoType::Portracer, "Running compute pass ...");
 
   /// Update camera
-  camera_.Update(queue_, (float) WIDTH / (float) HEIGHT);
+  Point3 origin = Vec3(0, 0, 0);
+  Point3 target = Vec3(0, 0, 15);
+  float aspect = (float) WIDTH / (float) HEIGHT;
+  float time = 0.0f;
+  camera_.Update(queue_, origin, target, aspect, time);
 
   /// Input buffer
   std::vector<float> input(buffer_size_ / sizeof(float));

@@ -41,10 +41,7 @@ void Camera::InitBindGroupLayout(Device &device) {
 }
 
 void Camera::InitBuffers(Device &device) {
-  buffer_size_ = 0 +
-                 16 * sizeof(float) + // mvp
-                 16 * sizeof(float) + // inv_mvp
-                 4 * sizeof(float);   // seed
+  buffer_size_ = sizeof(Ray);
   BufferDescriptor buffer_desc{};
   buffer_desc.mappedAtCreation = false;
   buffer_desc.size = buffer_size_;
@@ -75,15 +72,7 @@ void Camera::InitBindGroup(Device &device) {
   uniforms_.bind_group_ = device.createBindGroup(bind_group_desc);
 }
 
-void Camera::Update(Queue &queue, float aspect) {
-  float near = 0.5f;
-  float far = 100.0f;
-  float fovy = (2.0f * M_PI) / 8.0f;
-  auto projection_mat = glm::perspective(fovy, aspect, near, far);
-  auto view_mat = glm::lookAt(vec3(0.0, 5.0, 15.0), vec3(0.0, 5.0, 0.0), vec3(0.0, 1.0, 0.0));
-  auto mvp = projection_mat * view_mat;
-  auto inv_mvp = glm::inverse(mvp);
-  std::array<float, 4> seed{Rand(), Rand(), Rand(), Rand()};
-  CameraUniforms uniforms{mvp, inv_mvp, seed};
-  queue.writeBuffer(uniform_buffer_, 0, &uniforms, sizeof(CameraUniforms));
+void Camera::Update(Queue &queue, Point3 origin, Point3 target, float aspect, float time) {
+  Ray ray{origin, target, aspect, time, Rand()};
+  queue.writeBuffer(uniform_buffer_, 0, &ray, sizeof(Ray));
 }

@@ -18,7 +18,6 @@ using std::shared_ptr;
 using std::make_shared;
 using std::sqrt;
 using glm::mat4x4;
-using glm::vec3;
 
 constexpr double INF = std::numeric_limits<double>::infinity();
 
