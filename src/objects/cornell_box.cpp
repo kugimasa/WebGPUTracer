@@ -2,17 +2,19 @@
 #include "objects/box.h"
 
 CornellBox::CornellBox(Device &device) {
-  /// Initialize Scene
-  Box walls = Box(Vec3(0, 5, 0), Vec3(10, 10, 10), 0, Color3(1, 0, 0));
-  Box box1 = Box(Vec3(1.5, 1.5, 1), Vec3(3, 3, 3), 0.3, Color3(0, 1, 0));
-  Box box2 = Box(Vec3(-2, 3, -2), Vec3(3, 6, 3), -0.4, Color3(0, 0, 1));
-  /// Initialize Light
-  Quad light = Quad(Vec3(0, 0, 9.5), Vec3(1, 0, 0), Vec3(0, 1, 0), Color3(5.0, 5.0, 5.0), true);
-  /// Create Quad Buffer
-  walls.PushQuads(quads_);
-  box1.PushQuads(quads_);
-  box2.PushQuads(quads_);
-  quads_.push_back(light);
+//  /// Initialize Scene
+//  Box walls = Box(Vec3(0, 5, 0), Vec3(10, 10, 10), 0, Color3(1, 0, 0));
+//  Box box1 = Box(Vec3(1.5, 1.5, 1), Vec3(3, 3, 3), 0.3, Color3(0, 1, 0));
+//  Box box2 = Box(Vec3(-2, 3, -2), Vec3(3, 6, 3), -0.4, Color3(0, 0, 1));
+//  /// Initialize Light
+//  Quad light = Quad(Vec3(0, 0, 9.5), Vec3(1, 0, 0), Vec3(0, 1, 0), Color3(5.0, 5.0, 5.0), true);
+  /// テスト用のQuad
+  auto center = Vec3(0, 0, -10);
+  auto right = Vec3(1, 0, 0);
+  auto up = Vec3(0, 1, 0);
+  Quad test_quad = Quad(center, right, up, Color3(1, 0, 0), true);
+  /// Quad Bufferの作成
+  quads_.push_back(test_quad);
   const uint32_t quad_stride = 16 * 4;
   BufferDescriptor quad_buffer_desc{};
   quad_buffer_desc.size = quad_stride * quads_.size();
@@ -33,14 +35,17 @@ CornellBox::CornellBox(Device &device) {
     quad_data[quad_offset++] = normal[0];
     quad_data[quad_offset++] = normal[1];
     quad_data[quad_offset++] = normal[2];
+    quad_data[quad_offset++] = -Dot(normal, quad.center_);
     const Vec3 inv_right = Inv(quad.right_);
     quad_data[quad_offset++] = inv_right[0];
     quad_data[quad_offset++] = inv_right[1];
     quad_data[quad_offset++] = inv_right[2];
+    quad_data[quad_offset++] = -Dot(inv_right, quad.center_);
     const Vec3 inv_up = Inv(quad.up_);
     quad_data[quad_offset++] = inv_up[0];
     quad_data[quad_offset++] = inv_up[1];
     quad_data[quad_offset++] = inv_up[2];
+    quad_data[quad_offset++] = -Dot(inv_up, quad.center_);
     quad_data[quad_offset++] = quad.color_[0];
     quad_data[quad_offset++] = quad.color_[1];
     quad_data[quad_offset++] = quad.color_[2];

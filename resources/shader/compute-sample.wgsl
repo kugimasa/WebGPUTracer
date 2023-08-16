@@ -59,7 +59,7 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
     let lower_left_corner = ray.start.xyz - half_w * u - half_h * v - w;
     let horizontal = 2.0 * half_w * u;
     let vertical = 2.0 * half_h * v;
-    let ray_dir = vec4(lower_left_corner + uv.x * horizontal + uv.y * vertical - ray.start.xyz, 0.0);
+    let ray_dir = vec4(ray.start.xyz - (lower_left_corner + uv.x * horizontal + uv.y * vertical), 0.0);
     return Ray(ray.start, ray_dir, ray.aspect, ray.time, ray.rand);
 }
 
@@ -68,7 +68,7 @@ fn raytrace(r : Ray) -> HitInfo {
   hit.dist = 1e20;
   hit.quad = kNoHit;
   for (var quad = 0u; quad < arrayLength(&quads); quad++) {
-    hit = intersect_ray_quad(ray, quad, hit);
+    hit = intersect_ray_quad(r, quad, hit);
   }
   return hit;
 }
