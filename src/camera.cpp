@@ -51,7 +51,7 @@ void Camera::InitBuffers(Device &device) {
 }
 
 void Camera::InitBindGroup(Device &device) {
-  /// Create a binding
+  /// Bindingを作成
   std::vector<BindGroupEntry> entries(2, Default);
 
   /// Uniform Buffer
@@ -59,7 +59,7 @@ void Camera::InitBindGroup(Device &device) {
   entries[0].buffer = uniform_buffer_;
   entries[0].offset = 0;
   entries[0].size = buffer_size_;
-  /// Output buffer
+  /// Quad Buffer
   CornellBox cb(device);
   entries[1].binding = 1;
   entries[1].buffer = cb.quad_buffer_;

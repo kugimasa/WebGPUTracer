@@ -22,8 +22,19 @@ struct Ray {
 struct HitInfo {
   dist : f32,
   quad : u32,
+  tri : u32,
   pos : vec3f,
   uv : vec2f,
+};
+
+// FIXME: vec3f で積めれないか検討
+struct Tri {
+  vert : vec4f,
+  e1 : vec4f,
+  e2 : vec4f,
+  norm : vec4f,
+  color : vec3f,
+  emissive : f32,
 };
 
 fn point_at(r : Ray, t : f32) -> vec3f {
@@ -48,6 +59,7 @@ fn rand_unit_sphere() -> vec3f {
 
 @group(0) @binding(0) var<uniform> ray : Ray;
 @group(0) @binding(1) var<storage> quads : array<Quad>;
+@group(1) @binding(0) var<storage> tris : array<Tri>;
 
 fn setup_camera_ray(uv: vec2f) -> Ray {
     let theta = radians(kFovy);
@@ -67,8 +79,12 @@ fn raytrace(r : Ray) -> HitInfo {
   var hit = HitInfo();
   hit.dist = 1e20;
   hit.quad = kNoHit;
+  hit.tri = kNoHit;
   for (var quad = 0u; quad < arrayLength(&quads); quad++) {
-    hit = intersect_ray_quad(r, quad, hit);
+    hit = intersect_quad(r, quad, hit);
+  }
+  for (var tri = 0u; tri < arrayLength(&tris); tri++) {
+    hit = intersect_tri(r, tri, hit);
   }
   return hit;
 }
@@ -96,7 +112,7 @@ fn intersect_sphere(center : vec3f, radius : f32, r : Ray) -> f32 {
   return (-b - sqrt(discriminant)) / (2.0 * a);
 }
 
-fn intersect_ray_quad(r : Ray, quad : u32, closest : HitInfo) -> HitInfo {
+fn intersect_quad(r : Ray, quad : u32, closest : HitInfo) -> HitInfo {
   let q = quads[quad];
   let plane_dist = dot(q.plane, vec4(r.start.xyz, 1.0));
   let ray_dist = plane_dist / -dot(q.plane.xyz, r.dir.xyz);
@@ -109,19 +125,52 @@ fn intersect_ray_quad(r : Ray, quad : u32, closest : HitInfo) -> HitInfo {
   return HitInfo(
     select(closest.dist, ray_dist, hit),
     select(closest.quad, quad,     hit),
+    closest.tri,
     select(closest.pos,  pos,      hit),
     select(closest.uv,   uv,       hit),
+  );
+}
+
+/// Möller–Trumbore intersection algorithm
+fn intersect_tri(r : Ray, tri_idx : u32, closest : HitInfo) -> HitInfo {
+  var hit = false;
+  // 一時変数に格納
+  let tri = tris[tri_idx];
+  let start = r.start.xyz;
+  let dir = r.dir.xyz;
+  let vert = tri.vert.xyz;
+  let e1 = tri.e1.xyz;
+  let e2 = tri.e2.xyz;
+  let p_vec = cross(dir, e2);
+  let det = dot(e1, p_vec);
+  let inv_det = 1.0 / det;
+  // 交差判定
+  let t_vec = start - vert;
+  let u = dot(t_vec, p_vec) * inv_det;
+  let q_vec = cross(t_vec, e1);
+  let v = dot(dir, q_vec) * inv_det;
+  let t = dot(e2, q_vec) * inv_det;
+  hit = (0.0 <= u && u <= 1.0) && (0.0 <= v && (u + v) <= 1.0);
+  let pos = point_at(r, t);
+  let ray_dist = distance(pos, start);
+  return HitInfo(
+    select(closest.dist, ray_dist, hit),
+    closest.quad,
+    select(closest.tri,  tri_idx,  hit),
+    select(closest.pos,  pos,      hit),
+    closest.uv,
   );
 }
 
 // まずはオブジェクトと交差したかをみる
 fn sample_hit(hit : HitInfo) -> vec3f {
   let quad = quads[hit.quad];
-  return quad.color;
+  let tri = tris[hit.tri];
+  return quad.color + tri.color;
 }
 
-@group(1) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
-@group(1) @binding(1) var frameBuffer: texture_storage_2d<rgba8unorm,write>;
+@group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
+@group(2) @binding(1) var frameBuffer: texture_storage_2d<rgba8unorm,write>;
 
 const NumReflectionRays = 5;
 

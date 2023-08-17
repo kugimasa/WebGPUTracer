@@ -4,6 +4,7 @@
 #include "glfw3webgpu.h"
 #include "utils/wgpu_util.h"
 #include "camera.h"
+#include "objects/scene.h"
 
 class Renderer {
 public:
@@ -40,6 +41,7 @@ private:
     static const uint32_t WIDTH = 640;
     static const uint32_t HEIGHT = 480;
     Camera camera_{};
+    Scene scene_{};
     bool hasWindow_ = false;
     GLFWwindow *window_ = nullptr;
     Instance instance_ = nullptr;

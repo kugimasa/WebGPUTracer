@@ -66,7 +66,7 @@ bool Renderer::InitDevice() {
   Print(PrintInfoType::WebGPU, "Requesting device ...");
   // Setting up required limits
   RequiredLimits requiredLimits = Default;
-  requiredLimits.limits.maxBindGroups = 2;
+  requiredLimits.limits.maxBindGroups = 3;
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
   requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
   // origin(3), target(3), aspect(1), time(1), seed(1)
@@ -80,7 +80,7 @@ bool Renderer::InitDevice() {
   // Cannot be 4096 on local macOS (wgpu-native)
   requiredLimits.limits.maxTextureDimension3D = 2048;
   requiredLimits.limits.maxTextureArrayLayers = 1;
-  requiredLimits.limits.maxStorageBuffersPerShaderStage = 2;
+  requiredLimits.limits.maxStorageBuffersPerShaderStage = 3;
   requiredLimits.limits.maxStorageBufferBindingSize = 2048;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
   requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
@@ -111,8 +111,10 @@ bool Renderer::InitDevice() {
   }, nullptr);
 #endif
 
-  /// Init Camera
+  /// カメラの初期化
   camera_ = Camera(device_);
+  /// シーンの初期化
+  scene_ = Scene(device_);
 
   /// Get device queue
   queue_ = device_.getQueue();
@@ -274,8 +276,10 @@ void Renderer::InitComputePipeline() {
 
   /// Create a pipeline layout
   PipelineLayoutDescriptor layout_desc{};
-  std::vector<WGPUBindGroupLayout> bind_group_layouts{camera_.GetUniforms().bind_group_layout_, bind_group_layout_};
-  layout_desc.bindGroupLayoutCount = 2;
+  std::vector<WGPUBindGroupLayout> bind_group_layouts{camera_.GetUniforms().bind_group_layout_,
+                                                      scene_.storage_.bind_group_layout_,
+                                                      bind_group_layout_};
+  layout_desc.bindGroupLayoutCount = 3;
   layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) bind_group_layouts.data();
   pipeline_layout_ = device_.createPipelineLayout(layout_desc);
 
@@ -361,7 +365,8 @@ void Renderer::OnCompute() {
   // Use compute pass
   compute_pass.setPipeline(compute_pipeline_);
   compute_pass.setBindGroup(0, camera_.GetUniforms().bind_group_, 0, nullptr);
-  compute_pass.setBindGroup(1, bind_group_, 0, nullptr);
+  compute_pass.setBindGroup(1, scene_.storage_.bind_group_, 0, nullptr);
+  compute_pass.setBindGroup(2, bind_group_, 0, nullptr);
 
   uint32_t invocation_count_x = texture_size_.width;
   uint32_t invocation_count_y = texture_size_.height;
@@ -445,6 +450,8 @@ void Renderer::OnFrame() {
 void Renderer::OnFinish() {
   /// Release Camera
   camera_.Release();
+  /// Release Scene
+  scene_.Release();
   /// WebGPU stuff
   /// Release WebGPU bind group
   bind_group_.release();

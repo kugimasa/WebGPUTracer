@@ -24,13 +24,9 @@ CornellBox::CornellBox(Device &device) {
   const uint32_t offset = 0;
   const uint32_t size = 0;
   auto *quad_data = (float *) quad_buffer.getConstMappedRange(offset, size);
-  const uint32_t vertex_stride = 4 * 10;
-  std::vector<float> vertex_data(quads_.size() * vertex_stride);
-  std::vector<uint16_t> index_data(quads_.size() * 6);
   uint32_t quad_offset = 0;
   for (int idx = 0; idx < (int) quads_.size(); ++idx) {
     Quad quad = quads_[idx];
-    int emissive = quad.emissive_ ? 1 : 0;
     const Vec3 normal = Unit(Cross(quad.right_, quad.up_));
     quad_data[quad_offset++] = normal[0];
     quad_data[quad_offset++] = normal[1];
@@ -49,6 +45,7 @@ CornellBox::CornellBox(Device &device) {
     quad_data[quad_offset++] = quad.color_[0];
     quad_data[quad_offset++] = quad.color_[1];
     quad_data[quad_offset++] = quad.color_[2];
+    const float emissive = quad.emissive_ ? 1.0f : 0.0f;
     quad_data[quad_offset++] = emissive;
   }
   quad_buffer.unmap();
