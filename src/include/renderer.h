@@ -4,7 +4,7 @@
 #include "glfw3webgpu.h"
 #include "utils/wgpu_util.h"
 #include "camera.h"
-#include "objects/scene.h"
+#include "scene.h"
 
 class Renderer {
 public:

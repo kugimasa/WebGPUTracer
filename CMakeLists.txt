@@ -19,7 +19,7 @@ add_executable(Portracer
                src/render.cpp
                src/objects/box.cpp
                src/objects/cornell_box.cpp
-               src/objects/scene.cpp
+               src/scene.cpp
                src/objects/triangle.cpp
                external/implementation.cpp)
 

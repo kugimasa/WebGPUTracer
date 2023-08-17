@@ -1,8 +1,9 @@
 #pragma once
 
 #include "utils/wgpu_util.h"
-#include "triangle.h"
-#include "quad.h"
+#include "objects/triangle.h"
+#include "objects/quad.h"
+#include "objects/sphere.h"
 
 class Scene {
 public:
@@ -31,6 +32,7 @@ private:
     Buffer CreateTriangleBuffer(Device &device);
 
     Buffer CreateQuadBuffer(Device &device);
+
     void InitBindGroup(Device &device);
 
 public:
