@@ -17,10 +17,16 @@ Scene::Scene(Device &device) {
   v1 = Vertex(Point3(-3, -1, -10), Vec3(0, 0, -1), 1, 0);
   v2 = Vertex(Point3(3, -1, -10), Vec3(0, 0, -1), 1, 1);
   Triangle tri2(v0, v1, v2, Color3(0, 1, 0));
-  /// SceneBufferの作成
   tris_.push_back(tri);
   tris_.push_back(tri2);
-  LoadObj(RESOURCE_DIR "/obj/kugizarashi.obj", Color3(0.5, 0.5, 0.5));
+  /// テスト用のQuad
+  auto center = Vec3(0, 0, -10);
+  auto right = Vec3(1, 0, 0);
+  auto up = Vec3(0, 1, 0);
+  Quad test_quad = Quad(center, right, up, Color3(1, 0, 0), true);
+  /// Quad Bufferの作成
+  quads_.push_back(test_quad);
+  // LoadObj(RESOURCE_DIR "/obj/kugizarashi.obj", Color3(0.5, 0.5, 0.5));
   /// バッファのバインド
   InitBindGroupLayout(device);
   InitBuffers(device);
@@ -32,8 +38,10 @@ Scene::Scene(Device &device) {
  */
 void Scene::Release() {
   storage_.bind_group_.release();
-  scene_buffer_.destroy();
-  scene_buffer_.release();
+  tri_buffer_.destroy();
+  tri_buffer_.release();
+  quad_buffer_.destroy();
+  quad_buffer_.release();
   storage_.bind_group_layout_.release();
 }
 
@@ -119,11 +127,15 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
  * BindGroupLayoutの初期化
  */
 void Scene::InitBindGroupLayout(Device &device) {
-  std::vector<BindGroupLayoutEntry> bindings(1, Default);
+  std::vector<BindGroupLayoutEntry> bindings(2, Default);
   /// Scene: Tris
   bindings[0].binding = 0;
   bindings[0].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[0].visibility = ShaderStage::Compute;
+  // Scene: Quads
+  bindings[1].binding = 1;
+  bindings[1].buffer.type = BufferBindingType::ReadOnlyStorage;
+  bindings[1].visibility = ShaderStage::Compute;
   /// BindGroupLayoutの作成
   BindGroupLayoutDescriptor bind_group_layout_desc{};
   bind_group_layout_desc.entryCount = (uint32_t) bindings.size();
@@ -136,10 +148,18 @@ void Scene::InitBindGroupLayout(Device &device) {
  * Buffer作成
  */
 void Scene::InitBuffers(Device &device) {
+  tri_buffer_ = CreateTriangleBuffer(device);
+  quad_buffer_ = CreateQuadBuffer(device);
+}
+
+/*
+ * TriangleBufferの作成
+ */
+Buffer Scene::CreateTriangleBuffer(Device &device) {
   const uint32_t tri_stride = 20 * 4;
   BufferDescriptor tri_buffer_desc{};
-  scene_buffer_size_ = tri_stride * tris_.size();
-  tri_buffer_desc.size = scene_buffer_size_;
+  tri_buffer_size_ = tri_stride * tris_.size();
+  tri_buffer_desc.size = tri_buffer_size_;
   tri_buffer_desc.usage = BufferUsage::Storage;
   tri_buffer_desc.mappedAtCreation = true;
   Buffer tri_buffer = device.createBuffer(tri_buffer_desc);
@@ -184,7 +204,49 @@ void Scene::InitBuffers(Device &device) {
     tri_data[tri_offset++] = emissive;
   }
   tri_buffer.unmap();
-  scene_buffer_ = tri_buffer;
+  return tri_buffer;
+}
+
+/*
+ * QuadBufferの作成
+ */
+Buffer Scene::CreateQuadBuffer(Device &device) {
+  const uint32_t quad_stride = 16 * 4;
+  BufferDescriptor quad_buffer_desc{};
+  quad_buffer_size_ = quad_stride * quads_.size();
+  quad_buffer_desc.size = quad_buffer_size_;
+  quad_buffer_desc.usage = BufferUsage::Storage;
+  quad_buffer_desc.mappedAtCreation = true;
+  Buffer quad_buffer = device.createBuffer(quad_buffer_desc);
+  const uint32_t offset = 0;
+  const uint32_t size = 0;
+  auto *quad_data = (float *) quad_buffer.getConstMappedRange(offset, size);
+  uint32_t quad_offset = 0;
+  for (int idx = 0; idx < (int) quads_.size(); ++idx) {
+    Quad quad = quads_[idx];
+    const Vec3 normal = Unit(Cross(quad.right_, quad.up_));
+    quad_data[quad_offset++] = normal[0];
+    quad_data[quad_offset++] = normal[1];
+    quad_data[quad_offset++] = normal[2];
+    quad_data[quad_offset++] = -Dot(normal, quad.center_);
+    const Vec3 inv_right = Inv(quad.right_);
+    quad_data[quad_offset++] = inv_right[0];
+    quad_data[quad_offset++] = inv_right[1];
+    quad_data[quad_offset++] = inv_right[2];
+    quad_data[quad_offset++] = -Dot(inv_right, quad.center_);
+    const Vec3 inv_up = Inv(quad.up_);
+    quad_data[quad_offset++] = inv_up[0];
+    quad_data[quad_offset++] = inv_up[1];
+    quad_data[quad_offset++] = inv_up[2];
+    quad_data[quad_offset++] = -Dot(inv_up, quad.center_);
+    quad_data[quad_offset++] = quad.color_[0];
+    quad_data[quad_offset++] = quad.color_[1];
+    quad_data[quad_offset++] = quad.color_[2];
+    const float emissive = quad.emissive_ ? 1.0f : 0.0f;
+    quad_data[quad_offset++] = emissive;
+  }
+  quad_buffer.unmap();
+  return quad_buffer;
 }
 
 /*
@@ -192,12 +254,17 @@ void Scene::InitBuffers(Device &device) {
  */
 void Scene::InitBindGroup(Device &device) {
   /// BindGroup を作成
-  std::vector<BindGroupEntry> entries(1, Default);
-  /// SceneBuffer
+  std::vector<BindGroupEntry> entries(2, Default);
+  /// TriBuffer
   entries[0].binding = 0;
-  entries[0].buffer = scene_buffer_;
+  entries[0].buffer = tri_buffer_;
   entries[0].offset = 0;
-  entries[0].size = scene_buffer_size_;
+  entries[0].size = tri_buffer_size_;
+  /// QuadBuffer
+  entries[1].binding = 1;
+  entries[1].buffer = quad_buffer_;
+  entries[1].offset = 0;
+  entries[1].size = quad_buffer_size_;
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = storage_.bind_group_layout_;
   bind_group_desc.entryCount = (uint32_t) entries.size();

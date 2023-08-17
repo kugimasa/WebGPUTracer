@@ -20,17 +20,12 @@ void Camera::Release() {
 }
 
 void Camera::InitBindGroupLayout(Device &device) {
-  std::vector<BindGroupLayoutEntry> bindings(2, Default);
+  std::vector<BindGroupLayoutEntry> bindings(1, Default);
 
   // Uniforms
   bindings[0].binding = 0;
   bindings[0].buffer.type = BufferBindingType::Uniform;
   bindings[0].visibility = ShaderStage::Compute;
-
-  // Scene: Cornell Box
-  bindings[1].binding = 1;
-  bindings[1].buffer.type = BufferBindingType::ReadOnlyStorage;
-  bindings[1].visibility = ShaderStage::Compute;
 
   /// Create a bind group layout
   BindGroupLayoutDescriptor bind_group_layout_desc{};
@@ -52,19 +47,13 @@ void Camera::InitBuffers(Device &device) {
 
 void Camera::InitBindGroup(Device &device) {
   /// Bindingを作成
-  std::vector<BindGroupEntry> entries(2, Default);
+  std::vector<BindGroupEntry> entries(1, Default);
 
   /// Uniform Buffer
   entries[0].binding = 0;
   entries[0].buffer = uniform_buffer_;
   entries[0].offset = 0;
   entries[0].size = buffer_size_;
-  /// Quad Buffer
-  CornellBox cb(device);
-  entries[1].binding = 1;
-  entries[1].buffer = cb.quad_buffer_;
-  entries[1].offset = 0;
-  entries[1].size = cb.quad_buffer_.getSize();
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = uniforms_.bind_group_layout_;
   bind_group_desc.entryCount = (uint32_t) entries.size();

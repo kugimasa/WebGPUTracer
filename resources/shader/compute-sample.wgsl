@@ -57,8 +57,8 @@ fn rand_unit_sphere() -> vec3f {
 }
 
 @group(0) @binding(0) var<uniform> ray : Ray;
-@group(0) @binding(1) var<storage> quads : array<Quad>;
 @group(1) @binding(0) var<storage> tris : array<Tri>;
+@group(1) @binding(1) var<storage> quads : array<Quad>;
 
 fn setup_camera_ray(uv: vec2f) -> Ray {
     let theta = radians(kFovy);

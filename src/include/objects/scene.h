@@ -28,12 +28,17 @@ private:
 
     void InitBuffers(Device &device);
 
+    Buffer CreateTriangleBuffer(Device &device);
+
+    Buffer CreateQuadBuffer(Device &device);
     void InitBindGroup(Device &device);
 
 public:
     std::vector<Triangle> tris_;
     std::vector<Quad> quads_;
-    uint32_t scene_buffer_size_ = 0;
-    Buffer scene_buffer_ = nullptr;
+    uint32_t tri_buffer_size_ = 0;
+    uint32_t quad_buffer_size_ = 0;
+    Buffer tri_buffer_ = nullptr;
+    Buffer quad_buffer_ = nullptr;
     Storage storage_ = {};
 };
