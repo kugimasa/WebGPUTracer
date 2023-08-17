@@ -8,8 +8,13 @@ Scene::Scene(Device &device) {
   Vertex v1(Point3(-3, -1, -9), Vec3(0, 0, -1), 1, 0);
   Vertex v2(Point3(3, -1, -9), Vec3(0, 0, -1), 1, 1);
   Triangle tri(v0, v1, v2, Color3(0, 0, 1));
+  v0 = Vertex(Point3(2, 1, -10), Vec3(0, 0, -1), 0, 1);
+  v1 = Vertex(Point3(-3, -1, -10), Vec3(0, 0, -1), 1, 0);
+  v2 = Vertex(Point3(3, -1, -10), Vec3(0, 0, -1), 1, 1);
+  Triangle tri2(v0, v1, v2, Color3(0, 1, 0));
   /// SceneBufferの作成
   tris_.push_back(tri);
+  tris_.push_back(tri2);
   /// バッファのバインド
   InitBindGroupLayout(device);
   InitBuffers(device);

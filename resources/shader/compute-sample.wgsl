@@ -125,7 +125,7 @@ fn intersect_quad(r : Ray, quad : u32, closest : HitInfo) -> HitInfo {
   return HitInfo(
     select(closest.dist, ray_dist, hit),
     select(closest.quad, quad,     hit),
-    closest.tri,
+    kNoHit,
     select(closest.pos,  pos,      hit),
     select(closest.uv,   uv,       hit),
   );
@@ -150,12 +150,15 @@ fn intersect_tri(r : Ray, tri_idx : u32, closest : HitInfo) -> HitInfo {
   let q_vec = cross(t_vec, e1);
   let v = dot(dir, q_vec) * inv_det;
   let t = dot(e2, q_vec) * inv_det;
-  hit = (0.0 <= u && u <= 1.0) && (0.0 <= v && (u + v) <= 1.0);
   let pos = point_at(r, t);
   let ray_dist = distance(pos, start);
+  hit = ray_dist < closest.dist &&
+        (0.0 <= u && u <= 1.0) &&
+        (0.0 <= v && (u + v) <= 1.0);
+
   return HitInfo(
     select(closest.dist, ray_dist, hit),
-    closest.quad,
+    select(closest.quad, kNoHit,   hit),
     select(closest.tri,  tri_idx,  hit),
     select(closest.pos,  pos,      hit),
     closest.uv,
