@@ -33,14 +33,19 @@ private:
 
     Buffer CreateQuadBuffer(Device &device);
 
+    Buffer CreateSphereBuffer(Device &device);
+
     void InitBindGroup(Device &device);
 
 public:
     std::vector<Triangle> tris_;
     std::vector<Quad> quads_;
+    std::vector<Sphere> spheres_;
     uint32_t tri_buffer_size_ = 0;
     uint32_t quad_buffer_size_ = 0;
+    uint32_t sphere_buffer_size_ = 0;
     Buffer tri_buffer_ = nullptr;
     Buffer quad_buffer_ = nullptr;
+    Buffer sphere_buffer_ = nullptr;
     Storage storage_ = {};
 };
