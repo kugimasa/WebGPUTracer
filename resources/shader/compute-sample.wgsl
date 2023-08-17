@@ -27,7 +27,6 @@ struct HitInfo {
   uv : vec2f,
 };
 
-// FIXME: vec3f で積めれないか検討
 struct Tri {
   vert : vec4f,
   e1 : vec4f,

@@ -20,6 +20,10 @@ public:
     void Release();
 
 private:
+    void LoadObj(const char *file_path, Color3 color);
+
+    void LoadVertices(const char *file_path, std::vector<Vertex> &vertices);
+
     void InitBindGroupLayout(Device &device);
 
     void InitBuffers(Device &device);

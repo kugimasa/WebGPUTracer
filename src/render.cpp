@@ -74,14 +74,14 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxVertexAttributes = 3;
   requiredLimits.limits.maxVertexBufferArrayStride = 10 * sizeof(float);
   requiredLimits.limits.maxVertexBuffers = 3;
-  requiredLimits.limits.maxBufferSize = WIDTH * HEIGHT * sizeof(float);
+  requiredLimits.limits.maxBufferSize = 100000 * sizeof(Vertex);
   requiredLimits.limits.maxTextureDimension1D = 4096;
   requiredLimits.limits.maxTextureDimension2D = 4096;
   // Cannot be 4096 on local macOS (wgpu-native)
   requiredLimits.limits.maxTextureDimension3D = 2048;
   requiredLimits.limits.maxTextureArrayLayers = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 3;
-  requiredLimits.limits.maxStorageBufferBindingSize = 2048;
+  requiredLimits.limits.maxStorageBufferBindingSize = 100000 * sizeof(Vertex);
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
   requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
   requiredLimits.limits.maxComputeWorkgroupSizeY = 60;
