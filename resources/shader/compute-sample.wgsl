@@ -3,7 +3,7 @@ const k_1_PI = 0.318309886184;
 const kNoHit = 0xffffffffu;
 const kFovy = 40.0f;
 const kYup = vec3f(0.0, 1.0, 0.0);
-const kNumReflectionRays = 5;
+const kRayDepth = 5;
 const kRayMin = 0.0001;
 const kRayMax = 1e20;
 const kBG = vec3f(0.2,0.2, 0.2);
@@ -19,11 +19,10 @@ struct Ray {
 /// shape: tri(0), quad(1), sphere(2)
 struct HitInfo {
   dist : f32,
-  shape : u32,
-  id : u32,
   pos : vec3f,
   norm : vec3f,
   uv : vec2f,
+  col : vec3f,
 };
 
 struct Tri {
@@ -31,7 +30,7 @@ struct Tri {
   e1 : vec4f,
   e2 : vec4f,
   norm : vec4f,
-  color : vec3f,
+  col : vec3f,
   emissive : f32,
 };
 
@@ -39,14 +38,14 @@ struct Quad {
   norm : vec4f,
   right : vec4f,
   up : vec4f,
-  color : vec3f,
+  col : vec3f,
   emissive : f32,
 };
 
 struct Sphere {
   center : vec3f,
   radius : f32,
-  color : vec3f,
+  col : vec3f,
   emissive : f32,
 };
 
@@ -110,11 +109,20 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
     return Ray(ray.start, ray_dir, ray.aspect, ray.time, ray.seed);
 }
 
-fn raytrace(r : Ray) -> HitInfo {
+fn raytrace(r : Ray, depth : i32) -> vec3f {
+  var col = kBG;
+  if (depth <= 0) {
+    return col;
+  }
+  var hit = sample_hit(r);
+  col = hit.col;
+  return col;
+}
+
+fn sample_hit(r : Ray) -> HitInfo {
   var hit = HitInfo();
   hit.dist = kRayMax;
-  hit.shape = kNoHit;
-  hit.id = kNoHit;
+  hit.col = kBG;
   for (var tri = 0u; tri < arrayLength(&tris); tri++) {
     hit = intersect_tri(r, tri, hit);
   }
@@ -149,17 +157,17 @@ fn intersect_tri(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   let pos = point_at(r, t);
   let norm = face_norm(r, tri.norm.xyz);
   let ray_dist = distance(pos, start);
+  let emissive = tri.emissive;
   hit = ray_dist < closest.dist &&
         (0.0 <= u && u <= 1.0) &&
         (0.0 <= v && (u + v) <= 1.0);
 
   return HitInfo(
     select(closest.dist, ray_dist, hit),
-    select(closest.shape, 0u, hit),
-    select(closest.id, id, hit),
     select(closest.pos, pos, hit),
     select(closest.norm, norm, hit),
     closest.uv,
+    select(closest.col, tri.col, hit),
   );
 }
 
@@ -169,17 +177,17 @@ fn intersect_quad(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   let ray_dist = plane_dist / -dot(q.norm.xyz, r.dir.xyz);
   let pos = r.start.xyz + r.dir.xyz * ray_dist;
   let uv = vec2f(dot(vec4f(pos, 1.0), q.right), dot(vec4f(pos, 1.0), q.up)) * 0.5 + 0.5;
+  let emissive = q.emissive;
   let hit = plane_dist > 0.0 &&
             ray_dist > 0.0 &&
             ray_dist < closest.dist &&
             all((uv > vec2f()) & (uv < vec2f(1.0)));
   return HitInfo(
     select(closest.dist, ray_dist, hit),
-    select(closest.shape, 1u, hit),
-    select(closest.id, id, hit),
     select(closest.pos, pos, hit),
     select(closest.norm, q.norm.xyz, hit),
     select(closest.uv, uv, hit),
+    select(closest.col, q.col, hit),
   );
 }
 
@@ -201,42 +209,16 @@ fn intersect_sphere(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   let norm = face_norm(r, (pos - sphere.center) / sphere.radius);
   let uv = sphere_uv(norm);
   let ray_dist = distance(pos, r.start.xyz);
+  let emissive = sphere.emissive;
   let hit = ray_dist < closest.dist &&
             discriminant >= 0.0;
   return HitInfo(
     select(closest.dist, ray_dist, hit),
-    select(closest.shape, 2u, hit),
-    select(closest.id, id, hit),
     select(closest.pos, pos, hit),
     select(closest.norm, pos, hit),
     select(closest.uv, uv, hit),
+    select(closest.col, sphere.col, hit),
   );
-}
-
-fn sample_hit(hit : HitInfo) -> vec3f {
-  var hit_color = kBG;
-  switch (hit.shape) {
-    // Tri
-    case 0u: {
-      let tri = tris[hit.id];
-      hit_color = tri.color;
-    }
-    // Quad
-    case 1u: {
-      let quad = quads[hit.id];
-      hit_color = quad.color;
-    }
-    // Sphere
-    case 2u: {
-      let sphere = spheres[hit.id];
-      hit_color = sphere.color;
-    }
-    // 背景
-    default : {
-      hit_color = kBG;
-    }
-  }
-  return hit_color;
 }
 
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
@@ -249,9 +231,7 @@ fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     seed = invocation_id.x + invocation_id.y * screen_size.x + u32(ray.seed) * screen_size.x * screen_size.y;;
     let uv = vec2f(invocation_id.xy) / vec2f(screen_size);
     let r = setup_camera_ray(uv);
-    let hit = raytrace(r);
-    var hit_color = sample_hit(hit);
-    hit_color = vec3(rand(), rand(), rand());
+    var hit_color = raytrace(r, kRayDepth);
     textureStore(frameBuffer, invocation_id.xy, vec4(hit_color, 1.0));
   }
 }
