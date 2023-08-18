@@ -3,6 +3,7 @@ const k_1_PI = 0.318309886184;
 const kNoHit = 0xffffffffu;
 const kFovy = 40.0f;
 const kYup = vec3f(0.0, 1.0, 0.0);
+const kNumReflectionRays = 5;
 const kRayMin = 0.0001;
 const kRayMax = 1e20;
 const kBG = vec3f(0.2,0.2, 0.2);
@@ -12,7 +13,7 @@ struct Ray {
   dir : vec4f,
   aspect : f32,
   time : f32,
-  rand : f32,
+  seed : u32,
 };
 
 /// shape: tri(0), quad(1), sphere(2)
@@ -65,20 +66,29 @@ fn sphere_uv(norm : vec3f) -> vec2f {
   return vec2f(u, v);
 }
 
+// random function from
+// https://compute.toys/view/145
+var<private> seed : u32;
+fn rand() -> f32 {
+    seed = seed * 747796405u + 2891336453u;
+    let word = ((seed >> ((seed >> 28u) + 4u)) ^ seed) * 277803737u;
+    return f32((word >> 22u) ^ word) * bitcast<f32>(0x2f800004u);
+}
+
 fn rand_unit_sphere() -> vec3f {
-//    var u = rand();
-//    var v = rand();
-//    var theta = u * 2.0 * kPI;
-//    var phi = acos(2.0 * v - 1.0);
-//    var r = pow(rand(), 1.0/3.0);
-//    var sin_theta = sin(theta);
-//    var cos_theta = cos(theta);
-//    var sin_phi = sin(phi);
-//    var cos_phi = cos(phi);
-//    var x = r * sin_phi * sin_theta;
-//    var y = r * sin_phi * cos_theta;
-//    var z = r * cos_phi;
-    return vec3f(1.0, 0.0, 0.0);
+    var u = rand();
+    var v = rand();
+    var theta = u * 2.0 * kPI;
+    var phi = acos(2.0 * v - 1.0);
+    var r = pow(rand(), 1.0/3.0);
+    var sin_theta = sin(theta);
+    var cos_theta = cos(theta);
+    var sin_phi = sin(phi);
+    var cos_phi = cos(phi);
+    var x = r * sin_phi * sin_theta;
+    var y = r * sin_phi * cos_theta;
+    var z = r * cos_phi;
+    return vec3f(x, y, z);
 }
 
 @group(0) @binding(0) var<uniform> ray : Ray;
@@ -97,7 +107,7 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
     let horizontal = 2.0 * half_w * u;
     let vertical = 2.0 * half_h * v;
     let ray_dir = vec4(ray.start.xyz - (lower_left_corner + uv.x * horizontal + uv.y * vertical), 0.0);
-    return Ray(ray.start, ray_dir, ray.aspect, ray.time, ray.rand);
+    return Ray(ray.start, ray_dir, ray.aspect, ray.time, ray.seed);
 }
 
 fn raytrace(r : Ray) -> HitInfo {
@@ -232,25 +242,16 @@ fn sample_hit(hit : HitInfo) -> vec3f {
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
 @group(2) @binding(1) var frameBuffer: texture_storage_2d<rgba8unorm,write>;
 
-const NumReflectionRays = 5;
-
 @compute @workgroup_size(8, 8)
 fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
-  if (all(invocation_id.xy < textureDimensions(frameBuffer))) {
-    let uv = vec2f(invocation_id.xy) / vec2f(textureDimensions(frameBuffer).xy);
+  let screen_size = vec2u(textureDimensions(frameBuffer));
+  if (all(invocation_id.xy < screen_size)) {
+    seed = invocation_id.x + invocation_id.y * screen_size.x + u32(ray.seed) * screen_size.x * screen_size.y;;
+    let uv = vec2f(invocation_id.xy) / vec2f(screen_size);
     let r = setup_camera_ray(uv);
     let hit = raytrace(r);
     var hit_color = sample_hit(hit);
-//    var normal = quads[hit.quad].plane.xyz;
-//        let bounce = reflect(ray.dir.xyz, normal);
-//        var reflection : vec3f;
-//        for (var i = 0; i < NumReflectionRays; i++) {
-//          let reflection_dir = normalize(bounce + rand_unit_sphere()*0.1);
-//          let reflection_ray = Ray(vec4(hit.pos + bounce * 1e-5, 1.0), vec4(reflection_dir, 1.0), r.aspect, r.time, r.rand);
-//          let reflection_hit = raytrace(reflection_ray);
-//          reflection += sample_hit(reflection_hit);
-//        }
-//    let color = mix(reflection / f32(NumReflectionRays), hit_color, 0.95);
+    hit_color = vec3(rand(), rand(), rand());
     textureStore(frameBuffer, invocation_id.xy, vec4(hit_color, 1.0));
   }
 }

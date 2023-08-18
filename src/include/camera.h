@@ -39,11 +39,11 @@ private:
         float dummy1;
         float aspect;
         float time;
-        float rand;
+        uint32_t seed;
         float dummy2;
 
-        Ray(Vec3 origin, Vec3 target, float aspect, float time, float rand) :
-                origin(origin), target(target), aspect(aspect), time(time), rand(rand) {}
+        Ray(Vec3 origin, Vec3 target, float aspect, float time, uint32_t seed) :
+                origin(origin), target(target), aspect(aspect), time(time), seed(seed) {}
     };
 
 

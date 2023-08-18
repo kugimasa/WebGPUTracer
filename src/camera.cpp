@@ -62,6 +62,6 @@ void Camera::InitBindGroup(Device &device) {
 }
 
 void Camera::Update(Queue &queue, Point3 origin, Point3 target, float aspect, float time) {
-  Ray ray{origin, target, aspect, time, Rand()};
+  Ray ray{origin, target, aspect, time, RandSeed()};
   queue.writeBuffer(uniform_buffer_, 0, &ray, sizeof(Ray));
 }

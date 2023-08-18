@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 #include <array>
+#include <random>
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
@@ -30,6 +31,12 @@ inline double Clamp(double x, double min, double max) {
   if (x < min) return min;
   if (x > max) return max;
   return x;
+}
+
+inline uint32_t RandSeed() {
+  std::mt19937 mt;
+  std::random_device rnd;
+  return rnd();
 }
 
 // [0,1)の値をランダムで返す
