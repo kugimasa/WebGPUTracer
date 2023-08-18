@@ -2,11 +2,14 @@ const kPI = 3.14159265359;
 const k_1_PI = 0.318309886184;
 const kNoHit = 0xffffffffu;
 const kFovy = 40.0f;
+const kXup = vec3f(1.0, 0.0, 0.0);
 const kYup = vec3f(0.0, 1.0, 0.0);
+const kZup = vec3f(0.0, 0.0, 1.0);
 const kRayDepth = 5;
 const kRayMin = 0.0001;
 const kRayMax = 1e20;
 const kBG = vec3f(0.2,0.2, 0.2);
+const kZero = vec3f(0.0, 0.0, 0.0);
 
 struct Ray {
   start : vec4f,
@@ -25,6 +28,18 @@ struct HitInfo {
   col : vec3f,
   flags : vec4f, // (emissive, _, _, _)
 };
+
+struct ONB {
+  u : vec3f,
+  v : vec3f,
+  w : vec3f,
+}
+
+struct Path {
+  ray : Ray,
+  col : vec3f,
+  depth : i32,
+}
 
 struct Tri {
   vert : vec4f,
@@ -50,15 +65,15 @@ struct Sphere {
   emissive : f32,
 };
 
-fn point_at(r : Ray, t : f32) -> vec3f {
+fn point_at(r: Ray, t: f32) -> vec3f {
   return r.start.xyz + t * r.dir.xyz;
 }
 
-fn face_norm(r : Ray, norm : vec3f) -> vec3f {
+fn face_norm(r: Ray, norm: vec3f) -> vec3f {
   return select(-norm, norm, dot(r.dir.xyz, norm) < 0.0);
 }
 
-fn sphere_uv(norm : vec3f) -> vec2f {
+fn sphere_uv(norm: vec3f) -> vec2f {
   let theta = acos(-norm.y);
   let phi = atan2(-norm.z, norm.x) + kPI;
   let u = phi * k_1_PI * 0.5;
@@ -91,6 +106,40 @@ fn rand_unit_sphere() -> vec3f {
     return vec3f(x, y, z);
 }
 
+fn rand_cos_dir() -> vec3f {
+  var r1 = rand();
+  var r2 = rand();
+  var z = sqrt(1.0 - r2);
+  var phi = 2.0 * kPI * r1;
+  var x = cos(phi) * sqrt(r2);
+  var y = sin(phi) * sqrt(r2);
+  return vec3f(x, y, z);
+}
+
+fn build_onb_from_w(w: vec3f) -> ONB {
+  var onb : ONB;
+  onb.w = normalize(w);
+  var a = select(kXup, kYup, (sign(onb.w.x) * onb.w.x) > 0.9);
+  onb.v = normalize(cross(onb.w, a));
+  onb.u = cross(onb.w, onb.v);
+  return onb;
+}
+
+fn sample_scatter_dir(onb: ONB) -> vec3f {
+  var a = rand_cos_dir();
+  return a.x * onb.u + a.y * onb.v + a.z * onb.w;
+}
+
+fn cosine_pdf(onb: ONB, dir: vec3f)-> f32 {
+  var cos = dot(normalize(dir), onb.w);
+  return select(cos * k_1_PI, 0.0, cos <= 0.0);
+}
+
+fn scattering_pdf(norm: vec3f, dir: vec3f) -> f32 {
+  var cos = dot(norm, normalize(dir));
+  return select(cos * k_1_PI, 0.0, cos < 0.0);
+}
+
 @group(0) @binding(0) var<uniform> ray : Ray;
 @group(1) @binding(0) var<storage> tris : array<Tri>;
 @group(1) @binding(1) var<storage> quads : array<Quad>;
@@ -110,21 +159,26 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
     return Ray(ray.start, ray_dir, ray.aspect, ray.time, ray.seed);
 }
 
-fn raytrace(r : Ray, depth : i32) -> vec3f {
-  var col = kBG;
-  if (depth <= 0) {
-    return col;
-  }
+fn raytrace(path: Path, depth: i32) -> Path {
+  var r = path.ray;
   var hit = sample_hit(r);
-  var hit_color = hit.col.xyz;
+  var hit_col = hit.col;
   let emissive = hit.flags.x;
+  // 光源の場合
   if (emissive > 0.0) {
-    col = hit_color;
+    return Path(r, hit_col, kRayDepth);
   }
-  return col;
+  // 反射
+  var onb = build_onb_from_w(hit.norm);
+  var scatter_dir = sample_scatter_dir(onb);
+  var scattered_ray = Ray(vec4f(hit.pos, 1.0), vec4f(scatter_dir, 1.0), r.aspect, r.time, r.seed);
+  var pdf_val = cosine_pdf(onb, scatter_dir);
+  var ray_col = hit_col * scattering_pdf(hit.norm, scatter_dir) * path.col / pdf_val;
+  /// パスを更新
+  return Path(scattered_ray, ray_col, depth);
 }
 
-fn sample_hit(r : Ray) -> HitInfo {
+fn sample_hit(r: Ray) -> HitInfo {
   var hit = HitInfo();
   hit.dist = kRayMax;
   hit.col = kBG;
@@ -142,7 +196,7 @@ fn sample_hit(r : Ray) -> HitInfo {
 }
 
 /// Möller–Trumbore intersection algorithm
-fn intersect_tri(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
+fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   var hit = false;
   // 一時変数に格納
   let tri = tris[id];
@@ -178,7 +232,7 @@ fn intersect_tri(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   );
 }
 
-fn intersect_quad(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
+fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let q = quads[id];
   let plane_dist = dot(q.norm, vec4(r.start.xyz, 1.0));
   let ray_dist = plane_dist / -dot(q.norm.xyz, r.dir.xyz);
@@ -199,7 +253,7 @@ fn intersect_quad(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   );
 }
 
-fn intersect_sphere(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
+fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let sphere = spheres[id];
   let oc = r.start.xyz - sphere.center;
   let dir = r.dir.xyz;
@@ -240,7 +294,16 @@ fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
     seed = invocation_id.x + invocation_id.y * screen_size.x + u32(ray.seed) * screen_size.x * screen_size.y;;
     let uv = vec2f(invocation_id.xy) / vec2f(screen_size);
     let r = setup_camera_ray(uv);
-    var hit_color = raytrace(r, kRayDepth);
-    textureStore(frameBuffer, invocation_id.xy, vec4(hit_color, 1.0));
+    var path = Path(r, kZero, 0);
+    var col = kZero;
+    for (var i = 0; i < kRayDepth; i++) {
+      // 反射上限
+      if (path.depth >= kRayDepth) {
+        break;
+      }
+      path = raytrace(path, i);
+      col += path.col;
+    }
+    textureStore(frameBuffer, invocation_id.xy, vec4(col, 1.0));
   }
 }
