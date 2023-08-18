@@ -1,9 +1,11 @@
 const kPI = 3.14159265359;
+const k_1_PI = 0.318309886184;
 const kNoHit = 0xffffffffu;
 const kFovy = 40.0f;
 const kYup = vec3f(0.0, 1.0, 0.0);
 const kRayMin = 0.0001;
 const kRayMax = 1e20;
+const kBG = vec3f(0.2,0.2, 0.2);
 
 struct Ray {
   start : vec4f,
@@ -13,12 +15,13 @@ struct Ray {
   rand : f32,
 };
 
+/// shape: tri(0), quad(1), sphere(2)
 struct HitInfo {
   dist : f32,
-  tri : u32,
-  quad : u32,
-  sphere : u32,
+  shape : u32,
+  id : u32,
   pos : vec3f,
+  norm : vec3f,
   uv : vec2f,
 };
 
@@ -32,7 +35,7 @@ struct Tri {
 };
 
 struct Quad {
-  plane : vec4f,
+  norm : vec4f,
   right : vec4f,
   up : vec4f,
   color : vec3f,
@@ -48,6 +51,18 @@ struct Sphere {
 
 fn point_at(r : Ray, t : f32) -> vec3f {
   return r.start.xyz + t * r.dir.xyz;
+}
+
+fn face_norm(r : Ray, norm : vec3f) -> vec3f {
+  return select(-norm, norm, dot(r.dir.xyz, norm) < 0.0);
+}
+
+fn sphere_uv(norm : vec3f) -> vec2f {
+  let theta = acos(-norm.y);
+  let phi = atan2(-norm.z, norm.x) + kPI;
+  let u = phi * k_1_PI * 0.5;
+  let v = theta * k_1_PI;
+  return vec2f(u, v);
 }
 
 fn rand_unit_sphere() -> vec3f {
@@ -88,9 +103,8 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
 fn raytrace(r : Ray) -> HitInfo {
   var hit = HitInfo();
   hit.dist = kRayMax;
-  hit.tri = kNoHit;
-  hit.quad = kNoHit;
-  hit.sphere = kNoHit;
+  hit.shape = kNoHit;
+  hit.id = kNoHit;
   for (var tri = 0u; tri < arrayLength(&tris); tri++) {
     hit = intersect_tri(r, tri, hit);
   }
@@ -104,10 +118,10 @@ fn raytrace(r : Ray) -> HitInfo {
 }
 
 /// Möller–Trumbore intersection algorithm
-fn intersect_tri(r : Ray, tri_idx : u32, closest : HitInfo) -> HitInfo {
+fn intersect_tri(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   var hit = false;
   // 一時変数に格納
-  let tri = tris[tri_idx];
+  let tri = tris[id];
   let start = r.start.xyz;
   let dir = r.dir.xyz;
   let vert = tri.vert.xyz;
@@ -123,6 +137,7 @@ fn intersect_tri(r : Ray, tri_idx : u32, closest : HitInfo) -> HitInfo {
   let v = dot(dir, q_vec) * inv_det;
   let t = dot(e2, q_vec) * inv_det;
   let pos = point_at(r, t);
+  let norm = face_norm(r, tri.norm.xyz);
   let ray_dist = distance(pos, start);
   hit = ray_dist < closest.dist &&
         (0.0 <= u && u <= 1.0) &&
@@ -130,18 +145,18 @@ fn intersect_tri(r : Ray, tri_idx : u32, closest : HitInfo) -> HitInfo {
 
   return HitInfo(
     select(closest.dist, ray_dist, hit),
-    select(closest.tri,  tri_idx,  hit),
-    kNoHit,
-    kNoHit,
-    select(closest.pos,  pos,      hit),
+    select(closest.shape, 0u, hit),
+    select(closest.id, id, hit),
+    select(closest.pos, pos, hit),
+    select(closest.norm, norm, hit),
     closest.uv,
   );
 }
 
-fn intersect_quad(r : Ray, quad : u32, closest : HitInfo) -> HitInfo {
-  let q = quads[quad];
-  let plane_dist = dot(q.plane, vec4(r.start.xyz, 1.0));
-  let ray_dist = plane_dist / -dot(q.plane.xyz, r.dir.xyz);
+fn intersect_quad(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
+  let q = quads[id];
+  let plane_dist = dot(q.norm, vec4(r.start.xyz, 1.0));
+  let ray_dist = plane_dist / -dot(q.norm.xyz, r.dir.xyz);
   let pos = r.start.xyz + r.dir.xyz * ray_dist;
   let uv = vec2f(dot(vec4f(pos, 1.0), q.right), dot(vec4f(pos, 1.0), q.up)) * 0.5 + 0.5;
   let hit = plane_dist > 0.0 &&
@@ -150,16 +165,16 @@ fn intersect_quad(r : Ray, quad : u32, closest : HitInfo) -> HitInfo {
             all((uv > vec2f()) & (uv < vec2f(1.0)));
   return HitInfo(
     select(closest.dist, ray_dist, hit),
-    select(closest.tri,  kNoHit,  hit),
-    select(closest.quad, quad,     hit),
-    kNoHit,
-    select(closest.pos,  pos,      hit),
-    select(closest.uv,   uv,       hit),
+    select(closest.shape, 1u, hit),
+    select(closest.id, id, hit),
+    select(closest.pos, pos, hit),
+    select(closest.norm, q.norm.xyz, hit),
+    select(closest.uv, uv, hit),
   );
 }
 
-fn intersect_sphere(r : Ray, idx : u32, closest : HitInfo) -> HitInfo {
-  let sphere = spheres[idx];
+fn intersect_sphere(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
+  let sphere = spheres[id];
   let oc = r.start.xyz - sphere.center;
   let dir = r.dir.xyz;
   let a = dot(dir, dir);
@@ -173,24 +188,45 @@ fn intersect_sphere(r : Ray, idx : u32, closest : HitInfo) -> HitInfo {
     root = (-half_b + sqrt_d) / a;
   }
   let pos = point_at(r, root);
+  let norm = face_norm(r, (pos - sphere.center) / sphere.radius);
+  let uv = sphere_uv(norm);
   let ray_dist = distance(pos, r.start.xyz);
   let hit = ray_dist < closest.dist &&
             discriminant >= 0.0;
   return HitInfo(
-    select(closest.dist,   ray_dist, hit),
-    select(closest.tri,    kNoHit,   hit),
-    select(closest.quad,   kNoHit,   hit),
-    select(closest.sphere, idx,      hit),
-    select(closest.pos,    pos,      hit),
-    closest.uv,
+    select(closest.dist, ray_dist, hit),
+    select(closest.shape, 2u, hit),
+    select(closest.id, id, hit),
+    select(closest.pos, pos, hit),
+    select(closest.norm, pos, hit),
+    select(closest.uv, uv, hit),
   );
 }
 
 fn sample_hit(hit : HitInfo) -> vec3f {
-  let quad = quads[hit.quad];
-  let tri = tris[hit.tri];
-  let sphere = spheres[hit.sphere];
-  return quad.color + tri.color + sphere.color;
+  var hit_color = kBG;
+  switch (hit.shape) {
+    // Tri
+    case 0u: {
+      let tri = tris[hit.id];
+      hit_color = tri.color;
+    }
+    // Quad
+    case 1u: {
+      let quad = quads[hit.id];
+      hit_color = quad.color;
+    }
+    // Sphere
+    case 2u: {
+      let sphere = spheres[hit.id];
+      hit_color = sphere.color;
+    }
+    // 背景
+    default : {
+      hit_color = kBG;
+    }
+  }
+  return hit_color;
 }
 
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
