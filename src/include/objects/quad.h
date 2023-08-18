@@ -6,7 +6,7 @@ class Quad {
 public:
     Quad() = default;
 
-    explicit Quad(Vec3 center, Vec3 right, Vec3 up, Color3 color, bool emissive) :
+    explicit Quad(Vec3 center, Vec3 right, Vec3 up, Color3 color, bool emissive = false) :
             center_(center),
             right_(right),
             up_(up),

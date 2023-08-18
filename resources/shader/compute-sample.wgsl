@@ -23,6 +23,7 @@ struct HitInfo {
   norm : vec3f,
   uv : vec2f,
   col : vec3f,
+  flags : vec4f, // (emissive, _, _, _)
 };
 
 struct Tri {
@@ -115,7 +116,11 @@ fn raytrace(r : Ray, depth : i32) -> vec3f {
     return col;
   }
   var hit = sample_hit(r);
-  col = hit.col;
+  var hit_color = hit.col.xyz;
+  let emissive = hit.flags.x;
+  if (emissive > 0.0) {
+    col = hit_color;
+  }
   return col;
 }
 
@@ -123,6 +128,7 @@ fn sample_hit(r : Ray) -> HitInfo {
   var hit = HitInfo();
   hit.dist = kRayMax;
   hit.col = kBG;
+  hit.flags = vec4f(0.0);
   for (var tri = 0u; tri < arrayLength(&tris); tri++) {
     hit = intersect_tri(r, tri, hit);
   }
@@ -157,7 +163,7 @@ fn intersect_tri(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   let pos = point_at(r, t);
   let norm = face_norm(r, tri.norm.xyz);
   let ray_dist = distance(pos, start);
-  let emissive = tri.emissive;
+  let flags = vec4f(tri.emissive, 0.0, 0.0, 0.0);
   hit = ray_dist < closest.dist &&
         (0.0 <= u && u <= 1.0) &&
         (0.0 <= v && (u + v) <= 1.0);
@@ -168,6 +174,7 @@ fn intersect_tri(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
     select(closest.norm, norm, hit),
     closest.uv,
     select(closest.col, tri.col, hit),
+    select(closest.flags, flags, hit),
   );
 }
 
@@ -177,7 +184,7 @@ fn intersect_quad(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   let ray_dist = plane_dist / -dot(q.norm.xyz, r.dir.xyz);
   let pos = r.start.xyz + r.dir.xyz * ray_dist;
   let uv = vec2f(dot(vec4f(pos, 1.0), q.right), dot(vec4f(pos, 1.0), q.up)) * 0.5 + 0.5;
-  let emissive = q.emissive;
+  let flags = vec4f(q.emissive, 0.0, 0.0, 0.0);
   let hit = plane_dist > 0.0 &&
             ray_dist > 0.0 &&
             ray_dist < closest.dist &&
@@ -188,6 +195,7 @@ fn intersect_quad(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
     select(closest.norm, q.norm.xyz, hit),
     select(closest.uv, uv, hit),
     select(closest.col, q.col, hit),
+    select(closest.flags, flags, hit),
   );
 }
 
@@ -209,15 +217,16 @@ fn intersect_sphere(r : Ray, id : u32, closest : HitInfo) -> HitInfo {
   let norm = face_norm(r, (pos - sphere.center) / sphere.radius);
   let uv = sphere_uv(norm);
   let ray_dist = distance(pos, r.start.xyz);
-  let emissive = sphere.emissive;
+  let flags = vec4f(sphere.emissive, 0.0, 0.0, 0.0);
   let hit = ray_dist < closest.dist &&
             discriminant >= 0.0;
   return HitInfo(
     select(closest.dist, ray_dist, hit),
     select(closest.pos, pos, hit),
-    select(closest.norm, pos, hit),
+    select(closest.norm, norm, hit),
     select(closest.uv, uv, hit),
     select(closest.col, sphere.col, hit),
+    select(closest.flags, flags, hit),
   );
 }
 
