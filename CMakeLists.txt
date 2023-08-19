@@ -45,8 +45,6 @@ else ()
                                )
 endif ()
 
-target_include_directories(Portracer PRIVATE glm)
-
 target_link_libraries(Portracer PRIVATE glfw webgpu glfw3webgpu)
 
 set_target_properties(Portracer PROPERTIES

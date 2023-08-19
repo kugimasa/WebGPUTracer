@@ -179,7 +179,6 @@ Temporary Items
 # External Libraries
 glfw/
 glfw3webgpu/
-glm/
 webgpu/
 
 # Obj files
