@@ -8,17 +8,10 @@
 #include <array>
 #include <random>
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_FORCE_LEFT_HANDED
-
-#include <glm.hpp>
-#include <ext.hpp>
-
 
 using std::shared_ptr;
 using std::make_shared;
 using std::sqrt;
-using glm::mat4x4;
 
 constexpr double INF = std::numeric_limits<double>::infinity();
 

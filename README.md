@@ -1,5 +1,7 @@
 # Portracer (_)=---=(_)
 
+[![Windows Build](https://github.com/kugimasa/Portracer/actions/workflows/windows_build.yml/badge.svg)](https://github.com/kugimasa/Portracer/actions/workflows/windows_build.yml)
+
 A WebGPU ray tracer for Ray Tracing Camp 9 (2023)
 
 This renderer is based on ["Learn WebGPU for C++"](https://eliemichel.github.io/LearnWebGPU) book.
