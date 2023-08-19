@@ -11,16 +11,9 @@
  */
 Scene::Scene(Device &device) {
   /// Triangleの追加
-  Vertex v0(Point3(3, 1, -12), Vec3(-1, 0, 0), 0, 1);
-  Vertex v1(Point3(3, -1, -6), Vec3(-1, 0, 0), 1, 0);
-  Vertex v2(Point3(3, -1, -9), Vec3(-1, 0, 0), 1, 1);
-  Triangle tri(v0, v1, v2, Color3(0, 0, 1), true);
-  v0 = Vertex(Point3(-3, 1, -12), Vec3(1, 0, 0), 0, 1);
-  v1 = Vertex(Point3(-3, -1, -6), Vec3(1, 0, 0), 1, 0);
-  v2 = Vertex(Point3(-3, -1, -9), Vec3(1, 0, 0), 1, 1);
-  Triangle tri2(v0, v1, v2, Color3(0, 1, 0), true);
-  tris_.push_back(tri2);
-  tris_.push_back(tri);
+  Vertex v0(Point3(0, 0, 0), Vec3(1, 0, 0), 0, 1);
+  Triangle dummy(v0, v0, v0, Color3(0.0, 0.0, 0.0));
+  tris_.push_back(dummy);
   // LoadObj(RESOURCE_DIR "/obj/chill-ball.obj", Color3(0.5, 0.5, 0.5), Vec3(0, 0, -10));
   /// Quadの追加
   auto pos = Point3(0, 0, -9);
@@ -28,7 +21,7 @@ Scene::Scene(Device &device) {
   auto cb = CornellBox(pos, scale);
   cb.PushToQuads(quads_);
   /// Sphereの追加
-  spheres_.emplace_back(Point3(0, 0, -9), 1, Color3(0, 1, 1), true);
+  spheres_.emplace_back(Point3(0, 0, -9), 1, Color3(7, 7, 7), true);
   /// バッファのバインド
   InitBindGroupLayout(device);
   InitBuffers(device);
@@ -212,7 +205,7 @@ Buffer Scene::CreateTriangleBuffer(Device &device) {
     tri_data[tri_offset++] = color[1];
     tri_data[tri_offset++] = color[2];
     /// エミッシブ
-    tri_data[tri_offset++] = tri.emissive_ ? 1.0f : 0.0f;
+    tri_data[tri_offset++] = tri.emissive_;
   }
   tri_buffer.unmap();
   return tri_buffer;
@@ -258,7 +251,7 @@ Buffer Scene::CreateQuadBuffer(Device &device) {
     quad_data[quad_offset++] = quad.color_[1];
     quad_data[quad_offset++] = quad.color_[2];
     /// エミッシブ
-    quad_data[quad_offset++] = quad.emissive_ ? 1.0f : 0.0f;
+    quad_data[quad_offset++] = quad.emissive_;
   }
   quad_buffer.unmap();
   return quad_buffer;
@@ -292,7 +285,7 @@ Buffer Scene::CreateSphereBuffer(Device &device) {
     sphere_data[sphere_offset++] = sphere.color_[1];
     sphere_data[sphere_offset++] = sphere.color_[2];
     /// エミッシブ
-    sphere_data[sphere_offset++] = sphere.emissive_ ? 1.0f : 0.0f;
+    sphere_data[sphere_offset++] = sphere.emissive_;
   }
   sphere_buffer.unmap();
   return sphere_buffer;

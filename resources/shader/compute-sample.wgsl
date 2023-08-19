@@ -8,8 +8,10 @@ const kZup = vec3f(0.0, 0.0, 1.0);
 const kRayDepth = 5;
 const kRayMin = 0.0001;
 const kRayMax = 1e20;
+const kSPP = 1000;
 const kBG = vec3f(0.2,0.2, 0.2);
 const kZero = vec3f(0.0, 0.0, 0.0);
+const kOne = vec3f(1.0, 1.0, 1.0);
 
 struct Ray {
   start : vec4f,
@@ -38,7 +40,7 @@ struct ONB {
 struct Path {
   ray : Ray,
   col : vec3f,
-  depth : i32,
+  end : bool,
 }
 
 struct Tri {
@@ -162,27 +164,34 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
 fn raytrace(path: Path, depth: i32) -> Path {
   var r = path.ray;
   var hit = sample_hit(r);
-  var hit_col = hit.col;
   let emissive = hit.flags.x;
-  // 光源の場合
+  // 光源の場合、トレースを終了
   if (emissive > 0.0) {
-    return Path(r, hit_col, kRayDepth);
+    if (depth == 0) {
+      return Path(r, hit.col, true);
+    }
+    // 照明計算
+    var ray_col = hit.col * path.col;
+    return Path(r, ray_col, true);
   }
-  // 反射
-  var onb = build_onb_from_w(hit.norm);
-  var scatter_dir = sample_scatter_dir(onb);
-  var scattered_ray = Ray(vec4f(hit.pos, 1.0), vec4f(scatter_dir, 1.0), r.aspect, r.time, r.seed);
-  var pdf_val = cosine_pdf(onb, scatter_dir);
-  var ray_col = hit_col * scattering_pdf(hit.norm, scatter_dir) * path.col / pdf_val;
-  /// パスを更新
-  return Path(scattered_ray, ray_col, depth);
+  // 反射オブジェクトの場合
+  else {
+    // 反射
+    var onb = build_onb_from_w(hit.norm);
+    var scatter_dir = sample_scatter_dir(onb);
+    // パスを更新
+    var scattered_ray = Ray(vec4f(hit.pos, 1.0), vec4f(scatter_dir, 1.0), r.aspect, r.time, r.seed);
+    var pdf_val = cosine_pdf(onb, scatter_dir);
+    var scattered_col = path.col * hit.col * scattering_pdf(hit.norm, scatter_dir) / pdf_val;
+    return Path(scattered_ray, scattered_col, false);
+  }
 }
 
 fn sample_hit(r: Ray) -> HitInfo {
   var hit = HitInfo();
   hit.dist = kRayMax;
   hit.col = kBG;
-  hit.flags = vec4f(0.0);
+  hit.flags = vec4f(0.0, 0.0, 0.0, 0.0);
   for (var tri = 0u; tri < arrayLength(&tris); tri++) {
     hit = intersect_tri(r, tri, hit);
   }
@@ -292,17 +301,19 @@ fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
   let screen_size = vec2u(textureDimensions(frameBuffer));
   if (all(invocation_id.xy < screen_size)) {
     seed = invocation_id.x + invocation_id.y * screen_size.x + u32(ray.seed) * screen_size.x * screen_size.y;;
-    let uv = vec2f(invocation_id.xy) / vec2f(screen_size);
-    let r = setup_camera_ray(uv);
-    var path = Path(r, kZero, 0);
-    var col = kZero;
-    for (var i = 0; i < kRayDepth; i++) {
-      // 反射上限
-      if (path.depth >= kRayDepth) {
-        break;
+    var col : vec3f;
+    for (var spp = 0; spp < kSPP; spp++) {
+      let u = (f32(invocation_id.x) + rand()) / f32(screen_size.x);
+      let v = (f32(invocation_id.y) + rand()) / f32(screen_size.y);
+      let r = setup_camera_ray(vec2f(u, v));
+      var path = Path(r, kOne, false);
+      for (var i = 0; i < kRayDepth; i++) {
+        path = raytrace(path, i);
+        if (path.end) {
+          break;
+        }
       }
-      path = raytrace(path, i);
-      col += path.col;
+      col += max(path.col, kZero) / f32(kSPP);
     }
     textureStore(frameBuffer, invocation_id.xy, vec4(col, 1.0));
   }
