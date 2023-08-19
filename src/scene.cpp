@@ -1,4 +1,5 @@
 #include "scene.h"
+#include "objects/cornell_box.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 // Optional. define TINYOBJLOADER_USE_MAPBOX_EARCUT gives robust trinagulation. Requires C++11
@@ -10,25 +11,24 @@
  */
 Scene::Scene(Device &device) {
   /// Triangleの追加
-  Vertex v0(Point3(3, 1, -9), Vec3(0, 0, -1), 0, 1);
-  Vertex v1(Point3(0, -1, -9), Vec3(0, 0, -1), 1, 0);
-  Vertex v2(Point3(6, -1, -9), Vec3(0, 0, -1), 1, 1);
-  Triangle tri(v0, v1, v2, Color3(0, 0, 1));
-  v0 = Vertex(Point3(-3, 1, -10), Vec3(0, 0, -1), 0, 1);
-  v1 = Vertex(Point3(0, -1, -10), Vec3(0, 0, -1), 1, 0);
-  v2 = Vertex(Point3(-6, -1, -10), Vec3(0, 0, -1), 1, 1);
-  Triangle tri2(v0, v1, v2, Color3(0, 1, 0));
+  Vertex v0(Point3(3, 1, -12), Vec3(-1, 0, 0), 0, 1);
+  Vertex v1(Point3(3, -1, -6), Vec3(-1, 0, 0), 1, 0);
+  Vertex v2(Point3(3, -1, -9), Vec3(-1, 0, 0), 1, 1);
+  Triangle tri(v0, v1, v2, Color3(0, 0, 1), true);
+  v0 = Vertex(Point3(-3, 1, -12), Vec3(1, 0, 0), 0, 1);
+  v1 = Vertex(Point3(-3, -1, -6), Vec3(1, 0, 0), 1, 0);
+  v2 = Vertex(Point3(-3, -1, -9), Vec3(1, 0, 0), 1, 1);
+  Triangle tri2(v0, v1, v2, Color3(0, 1, 0), true);
   tris_.push_back(tri2);
   tris_.push_back(tri);
-  // LoadObj(RESOURCE_DIR "/obj/kugizarashi.obj", Color3(0.5, 0.5, 0.5));
+  // LoadObj(RESOURCE_DIR "/obj/chill-ball.obj", Color3(0.5, 0.5, 0.5), Vec3(0, 0, -10));
   /// Quadの追加
-  auto center = Vec3(0, 0, -10);
-  auto right = Vec3(1, 0, 0);
-  auto up = Vec3(0, 1, 0);
-  Quad test_quad = Quad(center, right, up, Color3(1, 0, 0), true);
-  quads_.push_back(test_quad);
+  auto pos = Point3(0, 0, -9);
+  auto scale = Vec3(6, 6, 6);
+  auto cb = CornellBox(pos, scale);
+  cb.PushToQuads(quads_);
   /// Sphereの追加
-  spheres_.emplace_back(Point3(2, 0, 9), 2, Color3(0, 0, 1));
+  spheres_.emplace_back(Point3(0, 0, -9), 1, Color3(0, 1, 1), true);
   /// バッファのバインド
   InitBindGroupLayout(device);
   InitBuffers(device);
@@ -53,11 +53,14 @@ void Scene::Release() {
 /*
  * Objファイルのロード
  */
-void Scene::LoadObj(const char *file_path, Color3 color) {
+void Scene::LoadObj(const char *file_path, Color3 color, Vec3 translation, bool emissive) {
   std::vector<Vertex> vertices;
   LoadVertices(file_path, vertices);
   for (size_t i = 0; i < vertices.size() / 3; ++i) {
-    tris_.emplace_back(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2], color);
+    auto v0 = vertices[i * 3].Translate(translation);
+    auto v1 = vertices[i * 3 + 1].Translate(translation);
+    auto v2 = vertices[i * 3 + 2].Translate(translation);
+    tris_.emplace_back(v0, v1, v2, color, emissive);
   }
 }
 

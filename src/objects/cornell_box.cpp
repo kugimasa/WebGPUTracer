@@ -1,53 +1,41 @@
 #include "objects/cornell_box.h"
-#include "objects/box.h"
 
-CornellBox::CornellBox(Device &device) {
-//  /// Initialize Scene
-//  Box walls = Box(Vec3(0, 5, 0), Vec3(10, 10, 10), 0, Color3(1, 0, 0));
-//  Box box1 = Box(Vec3(1.5, 1.5, 1), Vec3(3, 3, 3), 0.3, Color3(0, 1, 0));
-//  Box box2 = Box(Vec3(-2, 3, -2), Vec3(3, 6, 3), -0.4, Color3(0, 0, 1));
-//  /// Initialize Light
-//  Quad light = Quad(Vec3(0, 0, 9.5), Vec3(1, 0, 0), Vec3(0, 1, 0), Color3(5.0, 5.0, 5.0), true);
-  /// テスト用のQuad
-  auto center = Vec3(0, 0, -10);
-  auto right = Vec3(1, 0, 0);
-  auto up = Vec3(0, 1, 0);
-  Quad test_quad = Quad(center, right, up, Color3(1, 0, 0), true);
-  /// Quad Bufferの作成
-  quads_.push_back(test_quad);
-  const uint32_t quad_stride = 16 * 4;
-  BufferDescriptor quad_buffer_desc{};
-  quad_buffer_desc.size = quad_stride * quads_.size();
-  quad_buffer_desc.usage = BufferUsage::Storage;
-  quad_buffer_desc.mappedAtCreation = true;
-  Buffer quad_buffer = device.createBuffer(quad_buffer_desc);
-  const uint32_t offset = 0;
-  const uint32_t size = 0;
-  auto *quad_data = (float *) quad_buffer.getConstMappedRange(offset, size);
-  uint32_t quad_offset = 0;
-  for (int idx = 0; idx < (int) quads_.size(); ++idx) {
-    Quad quad = quads_[idx];
-    const Vec3 normal = Unit(Cross(quad.right_, quad.up_));
-    quad_data[quad_offset++] = normal[0];
-    quad_data[quad_offset++] = normal[1];
-    quad_data[quad_offset++] = normal[2];
-    quad_data[quad_offset++] = -Dot(normal, quad.center_);
-    const Vec3 inv_right = Inv(quad.right_);
-    quad_data[quad_offset++] = inv_right[0];
-    quad_data[quad_offset++] = inv_right[1];
-    quad_data[quad_offset++] = inv_right[2];
-    quad_data[quad_offset++] = -Dot(inv_right, quad.center_);
-    const Vec3 inv_up = Inv(quad.up_);
-    quad_data[quad_offset++] = inv_up[0];
-    quad_data[quad_offset++] = inv_up[1];
-    quad_data[quad_offset++] = inv_up[2];
-    quad_data[quad_offset++] = -Dot(inv_up, quad.center_);
-    quad_data[quad_offset++] = quad.color_[0];
-    quad_data[quad_offset++] = quad.color_[1];
-    quad_data[quad_offset++] = quad.color_[2];
-    const float emissive = quad.emissive_ ? 1.0f : 0.0f;
-    quad_data[quad_offset++] = emissive;
-  }
-  quad_buffer.unmap();
-  quad_buffer_ = quad_buffer;
+CornellBox::CornellBox(Point3 center, Vec3 scale) {
+  center_ = center;
+  scale_ = scale;
+  auto p_x = center_.X();
+  auto p_y = center_.Y();
+  auto p_z = center_.Z();
+  auto s_x = scale_.X() / 2.0f;
+  auto s_y = scale_.Y() / 2.0f;
+  auto s_z = scale_.Z() / 2.0f;
+  /// Bottom
+  auto pos = Vec3(0, -s_y, p_z);
+  auto right = Vec3(s_x, 0, 0);
+  auto up = Vec3(0, 0, -s_z);
+  quads_.emplace_back(pos, right, up, Color3(0, 0, 0));
+  /// Top
+  pos = Vec3(0, s_y, p_z);
+  right = Vec3(s_x, 0, 0);
+  up = Vec3(0, 0, s_z);
+  quads_.emplace_back(pos, right, up, Color3(0, 0, 0));
+  /// Right
+  pos = Vec3(s_x, 0, p_z);
+  right = Vec3(0, 0, s_z);
+  up = Vec3(0, s_y, 0);
+  quads_.emplace_back(pos, right, up, Color3(0, 0, 0));
+  /// Left
+  pos = Vec3(-s_x, 0, p_z);
+  right = Vec3(0, 0, -s_z);
+  up = Vec3(0, s_y, 0);
+  quads_.emplace_back(pos, right, up, Color3(0, 0, 0));
+  /// Far
+  pos = Vec3(0, 0, p_z - s_z);
+  right = Vec3(s_x, 0, 0);
+  up = Vec3(0, s_y, 0);
+  quads_.emplace_back(pos, right, up, Color3(0, 0, 0));
+}
+
+void CornellBox::PushToQuads(std::vector<Quad> &quads) {
+  quads.insert(quads.end(), quads_.begin(), quads_.end());
 }

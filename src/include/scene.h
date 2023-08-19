@@ -9,7 +9,7 @@ class Scene {
 public:
     Scene() = default;
 
-    Scene(Device &device);
+    explicit Scene(Device &device);
 
     struct Storage {
         BindGroupLayout bind_group_layout_;
@@ -21,7 +21,7 @@ public:
     void Release();
 
 private:
-    void LoadObj(const char *file_path, Color3 color);
+    void LoadObj(const char *file_path, Color3 color, Vec3 translation = ZERO_Vec3, bool emissive = false);
 
     void LoadVertices(const char *file_path, std::vector<Vertex> &vertices);
 

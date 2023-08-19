@@ -11,6 +11,8 @@ public:
             normal_(normal),
             u_(u), v_(v) {}
 
+    Vertex Translate(Vec3 translation);
+
 public:
     Vec3 point_;
     Vec3 normal_;

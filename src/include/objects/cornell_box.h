@@ -7,9 +7,12 @@ class CornellBox {
 public:
     CornellBox() = default;
 
-    CornellBox(Device &device);
+    CornellBox(Point3 center, Vec3 scale);
+
+    void PushToQuads(std::vector<Quad> &quads);
 
 public:
-    Buffer quad_buffer_ = nullptr;
+    Point3 center_;
+    Vec3 scale_;
     std::vector<Quad> quads_;
 };
