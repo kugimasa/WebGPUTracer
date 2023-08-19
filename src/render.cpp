@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include "camera.h"
 #include "utils/save_texture.h"
+#include "utils/util.h"
 
 /// \brief Initialize function
 /// \param hasWindow Uses window by glfw if true
@@ -337,7 +338,30 @@ void Renderer::InitBindGroup() {
 /// \brief Compute pass
 void Renderer::OnCompute() {
   Print(PrintInfoType::Portracer, "Running compute pass ...");
+  // chrono変数
+  std::chrono::system_clock::time_point start, end;
+  // 時間計測開始
+  start = std::chrono::system_clock::now();
+  for (uint32_t i = 0; i < MAX_FRAME; ++i) {
+    OnRender(i);
+  }
+  queue_.release();
+  // 時間計測終了
+  end = std::chrono::system_clock::now();
+  // 経過時間の算出
+  double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  std::ostringstream sout;
+  sout << elapsed * 0.001 << "(sec)s" << std::endl;
+  Print(PrintInfoType::Portracer, "Finished: ", sout.str());
+}
 
+void Renderer::OnRender(int frame) {
+#ifndef NDEBUG
+  // chrono変数
+  std::chrono::system_clock::time_point start, end;
+  // 時間計測開始
+  start = std::chrono::system_clock::now();
+#endif
   /// Update camera
   Point3 origin = Vec3(0, 0, 0);
   Point3 target = Vec3(0, 0, 15);
@@ -382,15 +406,23 @@ void Renderer::OnCompute() {
   // Encode and submit the GPU commands
   CommandBuffer commands = encoder.finish(CommandBufferDescriptor{});
   queue_.submit(commands);
-
   // Save image
-  saveTexture(OUTPUT_DIR "/output.png", device_, texture_, 0 /* output MIP level */);
-
+  /// PNG出力
+  std::ostringstream sout;
+  sout << std::setw(3) << std::setfill('0') << frame;
+  std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
+  saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */);
   // Clean up
   commands.release();
   encoder.release();
   compute_pass.release();
-  queue_.release();
+#ifndef NDEBUG
+  // 時間計測終了
+  end = std::chrono::system_clock::now();
+  // 経過時間の算出
+  double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  std::cout << "[" << sout.str() << "]: " << elapsed * 0.001 << "(sec)s" << std::endl;
+#endif
 }
 
 /// \brief Called every frame

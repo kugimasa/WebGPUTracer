@@ -8,7 +8,6 @@
 #include <string>
 
 bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, wgpu::Texture texture, int mipLevel) {
-  Print(PrintInfoType::Portracer, "Saving image ...");
   using namespace wgpu;
 
   if (texture.getDimension() != TextureDimension::_2D) {
@@ -84,6 +83,5 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
   wgpuCommandEncoderRelease(encoder);
   wgpuCommandBufferRelease(command);
   wgpuQueueRelease(queue);
-  Print(PrintInfoType::Portracer, "Image saved!");
   return success;
 }

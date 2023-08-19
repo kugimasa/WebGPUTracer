@@ -12,6 +12,8 @@ public:
 
     void OnCompute();
 
+    void OnRender(int frame);
+
     void OnFrame();
 
     void OnFinish();
@@ -40,6 +42,7 @@ private:
 private:
     static const uint32_t WIDTH = 640;
     static const uint32_t HEIGHT = 480;
+    static const uint32_t MAX_FRAME = 1;
     Camera camera_{};
     Scene scene_{};
     bool hasWindow_ = false;

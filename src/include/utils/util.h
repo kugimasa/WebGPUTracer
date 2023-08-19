@@ -58,3 +58,8 @@ inline double RandDouble(double min, double max) {
 inline int RandInt(int min, int max) {
   return static_cast<int>(RandDouble(min, max + 1));
 }
+
+// 線形補間
+inline float lerp(float a, float b, float t) {
+  return a + t * (b - a);
+}
