@@ -177,9 +177,10 @@ Temporary Items
 /.idea/
 
 # External Libraries
-glfw/
-glfw3webgpu/
-webgpu/
+# TODO: Must uncomment when converting to public repo
+#glfw/
+#glfw3webgpu/
+#webgpu/
 
 # Obj files
 *.obj
