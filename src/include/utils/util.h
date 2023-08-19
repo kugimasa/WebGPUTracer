@@ -17,6 +17,10 @@ using std::sqrt;
 
 constexpr double INF = std::numeric_limits<double>::infinity();
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 inline double Deg2Rad(double degrees) {
   // 1 / 180.0 = 0.00555555555
   return degrees * M_PI * 0.00555555555;
