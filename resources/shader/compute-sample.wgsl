@@ -273,7 +273,18 @@ fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let norm = face_norm(r, tri.norm.xyz);
   let ray_dist = distance(pos, start);
   let flags = vec4f(tri.emissive, 0.0, 0.0, 0.0);
-  return HitInfo(ray_dist, pos, norm, closest.uv, tri.col, flags);
+  hit = ray_dist < closest.dist &&
+        (0.0 <= u && u <= 1.0) &&
+        (0.0 <= v && (u + v) <= 1.0);
+
+  return HitInfo(
+    select(closest.dist, ray_dist, hit),
+    select(closest.pos, pos, hit),
+    select(closest.norm, norm, hit),
+    closest.uv,
+    select(closest.col, tri.col, hit),
+    select(closest.flags, flags, hit),
+  );
 }
 
 fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
@@ -322,7 +333,16 @@ fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let uv = sphere_uv(norm);
   let ray_dist = distance(pos, r.start.xyz);
   let flags = vec4f(sphere.emissive, 0.0, 0.0, 0.0);
-  return HitInfo(ray_dist, pos, norm, uv, sphere.col, flags);
+  let hit = ray_dist < closest.dist &&
+            discriminant >= 0.0;
+  return HitInfo(
+    select(closest.dist, ray_dist, hit),
+    select(closest.pos, pos, hit),
+    select(closest.norm, norm, hit),
+    select(closest.uv, uv, hit),
+    select(closest.col, sphere.col, hit),
+    select(closest.flags, flags, hit),
+  );
 }
 
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
