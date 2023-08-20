@@ -6,7 +6,7 @@ const kXup = vec3f(1.0, 0.0, 0.0);
 const kYup = vec3f(0.0, 1.0, 0.0);
 const kZup = vec3f(0.0, 0.0, 1.0);
 const kRayDepth = 5;
-const kRayMin = 1e-8;
+const kRayMin = 1e-6;
 const kRayMax = 1e20;
 const kSPP = 10;
 const kBG = vec3f(0.2,0.2, 0.2);
@@ -21,6 +21,7 @@ struct Ray {
   seed : u32,
 };
 
+/// FIXME: Windowsビルドが落ちるため、`dab65be`の変更を元に戻す必要があるかもしれない
 /// shape: tri(0), quad(1), sphere(2)
 struct HitInfo {
   dist : f32,
@@ -150,42 +151,82 @@ fn onb_local(onb: ONB, a: vec3f) -> vec3f {
   return a.x * onb.u + a.y * onb.v + a.z * onb.w;
 }
 
-fn sample_test_dir(pos: vec3f) -> vec3f {
-  var sphere = spheres[0u];
-  var dir = sphere.center - pos;
+fn sample_direction(hit: HitInfo) -> vec3f {
+  if (rand() < 0.5) {
+    // 光源の形状に基づいたサンプリング
+    return sample_from_light(hit);
+  } else {
+    // BxDFに基づいたサンプリング
+    return sample_from_bxdf(hit);
+  }
+}
+
+fn sample_from_light(hit: HitInfo) -> vec3f {
+  let shape = 2u;
+  var dir: vec3f;
+  switch (shape) {
+    // Sphere
+    case 2u: {
+      // FIXME: 決めうちでライトを取得している
+      var sphere = spheres[0u];
+      dir = sample_from_sphere(sphere, hit.pos);
+    }
+    default: {
+      dir = vec3f(0.0, -1.0, 0.0);
+    }
+  }
   return dir;
 }
 
-fn sample_sphere_light_dir(pos: vec3f) -> vec3f {
-  // FIXME: 決めうちでライトを取得している
-  var sphere = spheres[0u];
+fn sample_from_sphere(sphere: Sphere, pos: vec3f) -> vec3f {
   var dir = sphere.center - pos;
   var onb = build_onb_from_w(dir);
   var square_dist = dot(dir, dir);
   return onb_local(onb, rand_to_sphere(sphere.radius, square_dist));
 }
 
-fn sample_scatter_dir(onb: ONB) -> vec3f {
+fn sample_from_bxdf(hit: HitInfo) -> vec3f {
+    let bxdf = 0u;
+    var dir: vec3f;
+    switch (bxdf) {
+      // Lambertian
+      case 0u: {
+        dir = sample_from_cosine(hit);
+      }
+      default: {
+        dir = vec3f(0.0, -1.0, 0.0);
+      }
+    }
+    return dir;
+}
+
+fn sample_from_cosine(hit: HitInfo) -> vec3f {
+  var onb = build_onb_from_w(hit.norm);
   var a = rand_cos_dir();
   return onb_local(onb, a);
 }
 
-fn sphere_pdf(pos: vec3f, dir: vec3f) -> f32 {
+fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
+  return 0.5 * cosine_pdf(hit, dir) + 0.5 * sphere_pdf(hit, dir);
+}
+
+fn sphere_pdf(hit: HitInfo, dir: vec3f) -> f32 {
   // FIXME: 決めうちでライトを取得している
   var sphere = spheres[0u];
-  var squared_dist = dot(sphere.center - pos, sphere.center - pos);
+  var squared_dist = dot(sphere.center - hit.pos, sphere.center - hit.pos);
   var cos_theta_max = sqrt(1.0 - sphere.radius * sphere.radius / squared_dist);
   var solid_angle = 2.0 * kPI * (1.0 - cos_theta_max);
   return 1.0 / solid_angle;
 }
 
-fn cosine_pdf(onb: ONB, dir: vec3f) -> f32 {
+fn cosine_pdf(hit: HitInfo, dir: vec3f) -> f32 {
+  var onb = build_onb_from_w(hit.norm);
   var cos = dot(normalize(dir), onb.w);
   return select(cos * k_1_PI, 0.0, cos <= 0.0);
 }
 
-fn scattering_pdf(norm: vec3f, dir: vec3f) -> f32 {
-  var cos = dot(norm, normalize(dir));
+fn scattering_pdf(hit: HitInfo, dir: vec3f) -> f32 {
+  var cos = dot(hit.norm, normalize(dir));
   return select(cos * k_1_PI, 0.0, cos < 0.0);
 }
 
@@ -211,9 +252,6 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
 fn raytrace(path: Path, depth: i32) -> Path {
   var r = path.ray;
   var hit = sample_hit(r);
-//  if (hit.shape == 1u) {
-//    return Path(r, vec3f(1.0, 0.0, 1.0), true);
-//  }
   let emissive = hit.emissive;
   // 光源の場合、トレースを終了
   if (emissive) {
@@ -227,14 +265,11 @@ fn raytrace(path: Path, depth: i32) -> Path {
   // 反射オブジェクトの場合
   else {
     // 反射
-    var onb = build_onb_from_w(hit.norm);
-    // var scatter_dir = sample_scatter_dir(onb);
-    // var pdf_val = cosine_pdf(onb, scatter_dir);
-    var scatter_dir = sample_sphere_light_dir(hit.pos);
-    var pdf_val = sphere_pdf(hit.pos, scatter_dir);
+    var scatter_dir = sample_direction(hit);
+    var pdf_val = mixture_pdf(hit, scatter_dir);
     // パスを更新
     var scattered_ray = Ray(vec4f(hit.pos, 1.0), vec4f(scatter_dir, 1.0), r.aspect, r.time, r.seed);
-    var scattered_col = path.col * hit.col * scattering_pdf(hit.norm, scatter_dir) / pdf_val;
+    var scattered_col = path.col * hit.col * scattering_pdf(hit, scatter_dir) / pdf_val;
     return Path(scattered_ray, scattered_col, false);
   }
 }
