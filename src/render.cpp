@@ -103,7 +103,13 @@ bool Renderer::InitDevice() {
   Print(PrintInfoType::WebGPU, "Got device: ", device_);
 
   // Error handling
-  device_.setUncapturedErrorCallback(OnDeviceError);
+  auto onDeviceError = [](WGPUErrorType type, char const *message, void * /* pUserData */) {
+      std::cout << "Uncaptured device error: type " << type;
+      if (message) std::cout << " (" << message << ")";
+      std::cout << std::endl;
+  };
+  wgpuDeviceSetUncapturedErrorCallback(device_, onDeviceError, nullptr /* pUserData */);
+  
 #ifdef WEBGPU_BACKEND_DAWN
   // Device lost callback
   wgpuDeviceSetDeviceLostCallback(device_, [](WGPUDeviceLostReason reason, char const *message, void *) {
