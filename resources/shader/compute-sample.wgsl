@@ -251,23 +251,23 @@ fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let p_vec = cross(dir, e2);
   let det = dot(e1, p_vec);
   if (det <= 0.0) {
-    return closest;
+    return HitInfo(closest.dist, closest.pos, closest.norm, closest.uv, closest.col, closest.flags);
   }
   let inv_det = 1.0 / det;
   // 交差判定
   let t_vec = start - vert;
   let u = dot(t_vec, p_vec) * inv_det;
   if (u < 0.0 || 1.0 < u) {
-    return closest;
+    return HitInfo(closest.dist, closest.pos, closest.norm, closest.uv, closest.col, closest.flags);
   }
   let q_vec = cross(t_vec, e1);
   let v = dot(dir, q_vec) * inv_det;
   if (v < 0.0 || 1.0 < u + v) {
-    return closest;
+    return HitInfo(closest.dist, closest.pos, closest.norm, closest.uv, closest.col, closest.flags);
   }
   let t = dot(e2, q_vec) * inv_det;
   if (t < kRayMin || kRayMax < t) {
-    return closest;
+    return HitInfo(closest.dist, closest.pos, closest.norm, closest.uv, closest.col, closest.flags);
   }
   let pos = point_at(r, t);
   let norm = face_norm(r, tri.norm.xyz);
@@ -306,7 +306,7 @@ fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let c = dot(oc, oc) - sphere.radius * sphere.radius;
   let discriminant = half_b * half_b - a * c;
   if (discriminant < 0.0) {
-    return closest;
+    return HitInfo(closest.dist, closest.pos, closest.norm, closest.uv, closest.col, closest.flags);
   }
   let sqrt_d = sqrt(discriminant);
   // 最近傍のrootを探す
@@ -314,7 +314,7 @@ fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   if (root < kRayMin || kRayMax < root) {
     root = (-half_b + sqrt_d) / a;
     if (root < kRayMin || kRayMax < root) {
-      return closest;
+      return HitInfo(closest.dist, closest.pos, closest.norm, closest.uv, closest.col, closest.flags);
     }
   }
   let pos = point_at(r, root);
