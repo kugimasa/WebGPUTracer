@@ -333,16 +333,7 @@ fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let uv = sphere_uv(norm);
   let ray_dist = distance(pos, r.start.xyz);
   let flags = vec4f(sphere.emissive, 0.0, 0.0, 0.0);
-  let hit = ray_dist < closest.dist &&
-            discriminant >= 0.0;
-  return HitInfo(
-    select(closest.dist, ray_dist, hit),
-    select(closest.pos, pos, hit),
-    select(closest.norm, norm, hit),
-    select(closest.uv, uv, hit),
-    select(closest.col, sphere.col, hit),
-    select(closest.flags, flags, hit),
-  );
+  return HitInfo(ray_dist, pos, norm, uv, sphere.col, flags);
 }
 
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
