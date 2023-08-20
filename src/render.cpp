@@ -109,7 +109,7 @@ bool Renderer::InitDevice() {
       std::cout << std::endl;
   };
   wgpuDeviceSetUncapturedErrorCallback(device_, onDeviceError, nullptr /* pUserData */);
-  
+
 #ifdef WEBGPU_BACKEND_DAWN
   // Device lost callback
   wgpuDeviceSetDeviceLostCallback(device_, [](WGPUDeviceLostReason reason, char const *message, void *) {
@@ -362,12 +362,10 @@ void Renderer::OnCompute() {
 }
 
 void Renderer::OnRender(int frame) {
-#ifndef NDEBUG
   // chrono変数
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
   start = std::chrono::system_clock::now();
-#endif
   /// Update camera
   /// NOTE: 原点が(0, 0, 0)だと描画がうまくいかないことがある(FarのQuadなど)
   Point3 origin = Vec3(0, 0, 0.01);
@@ -418,18 +416,18 @@ void Renderer::OnRender(int frame) {
   std::ostringstream sout;
   sout << std::setw(3) << std::setfill('0') << frame;
   std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
-  saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */);
+  if (!saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */)) {
+    Error(PrintInfoType::Portracer, "Image output failed.");
+  }
   // Clean up
   commands.release();
   encoder.release();
   compute_pass.release();
-#ifndef NDEBUG
   // 時間計測終了
   end = std::chrono::system_clock::now();
   // 経過時間の算出
   double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::cout << "[" << sout.str() << "]: " << elapsed * 0.001 << "(sec)s" << std::endl;
-#endif
 }
 
 /// \brief Called every frame
