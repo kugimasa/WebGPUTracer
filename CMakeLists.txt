@@ -20,6 +20,7 @@ add_executable(Portracer
                src/objects/box.cpp
                src/objects/cornell_box.cpp
                src/objects/triangle.cpp
+               src/objects/quad.cpp
                src/objects/vertex.cpp
                src/scene.cpp
                external/implementation.cpp)
@@ -57,5 +58,12 @@ if (MSVC)
 else ()
     target_compile_options(Portracer PRIVATE -Wall -Wextra -pedantic)
 endif ()
+
+if(XCODE)
+    set_target_properties(Portracer PROPERTIES
+                          XCODE_GENERATE_SCHEME ON
+                          XCODE_SCHEME_ENABLE_GPU_FRAME_CAPTURE_MODE "Metal")
+endif()
+
 # This might be unnecessary
 target_copy_webgpu_binaries(Portracer)

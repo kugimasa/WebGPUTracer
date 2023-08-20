@@ -155,7 +155,7 @@ inline float Dot(const Vec3 &v1, const Vec3 &v2) {
 
 inline Vec3 Cross(const Vec3 &v1, const Vec3 &v2) {
   return Vec3((v1.e_[1] * v2.e_[2] - v1.e_[2] * v2.e_[1]),
-              (-(v1.e_[0] * v2.e_[2] - v1.e_[2] * v2.e_[0])),
+              (-v1.e_[0] * v2.e_[2] + v1.e_[2] * v2.e_[0]),
               (v1.e_[0] * v2.e_[1] - v1.e_[1] * v2.e_[0]));
 }
 

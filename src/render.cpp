@@ -363,7 +363,8 @@ void Renderer::OnRender(int frame) {
   start = std::chrono::system_clock::now();
 #endif
   /// Update camera
-  Point3 origin = Vec3(0, 0, 0);
+  /// NOTE: 原点が(0, 0, 0)だと描画がうまくいかないことがある(FarのQuadなど)
+  Point3 origin = Vec3(0, 0, 0.01);
   Point3 target = Vec3(0, 0, 15);
   float aspect = (float) WIDTH / (float) HEIGHT;
   float time = 0.0f;

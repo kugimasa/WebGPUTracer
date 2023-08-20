@@ -17,13 +17,22 @@ Scene::Scene(Device &device) {
   tris_.emplace_back(v0, v1, v2, Color3(0.2, 0.1, 0.8));
   // LoadObj(RESOURCE_DIR "/obj/chill-ball.obj", Color3(7.0, 7.0, 7.0), Vec3(-2, -2, -6), true);
   /// Quadの追加
+  /// FIXME: 以下テスト用
   auto pos = Point3(0, 0, -9);
   auto scale = Vec3(6, 6, 6);
   auto cb = CornellBox(pos, scale);
-  pos = Point3(-2.0, 0, -9);
-  auto right = Vec3(0, 0, -1.0);
-  auto up = Vec3(0, 1.0, 0);
+  auto u = 1.0f;
+  auto v = 2.0f;
+  auto center = Point3(2.0f, 0.0f, -9.0f);
+  pos = Point3(center.X(), center.Y() - v / 2.0f, center.Z() + u / 2.0f);
+  auto right = Vec3(0, 0, -u);
+  auto up = Vec3(0, v, 0);
   quads_.emplace_back(pos, right, up, Color3(0.0, 0.2, 0.5));
+  pos = Vec3(-2, -2, -10);
+  right = Vec3(4, 0, 0);
+  up = Vec3(0, 4, 0);
+  quads_.emplace_back(pos, right, up, Color3(0.0, 0.2, .05));
+  /// CornellBoxの追加
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
@@ -222,7 +231,7 @@ Buffer Scene::CreateTriangleBuffer(Device &device) {
  * QuadBufferの作成
  */
 Buffer Scene::CreateQuadBuffer(Device &device) {
-  const uint32_t quad_stride = 16 * 4;
+  const uint32_t quad_stride = 24 * 4;
   BufferDescriptor quad_buffer_desc{};
   quad_buffer_size_ = quad_stride * quads_.size();
   quad_buffer_desc.size = quad_buffer_size_;
@@ -233,26 +242,35 @@ Buffer Scene::CreateQuadBuffer(Device &device) {
   const uint32_t size = 0;
   auto *quad_data = (float *) quad_buffer.getConstMappedRange(offset, size);
   uint32_t quad_offset = 0;
+  const float dummy = 1.0f;
   for (int idx = 0; idx < (int) quads_.size(); ++idx) {
     Quad quad = quads_[idx];
+    /// 位置
+    quad_data[quad_offset++] = quad.center_[0];
+    quad_data[quad_offset++] = quad.center_[1];
+    quad_data[quad_offset++] = quad.center_[2];
+    quad_data[quad_offset++] = dummy;
+    /// 右ベクトル
+    quad_data[quad_offset++] = quad.right_[0];
+    quad_data[quad_offset++] = quad.right_[1];
+    quad_data[quad_offset++] = quad.right_[2];
+    quad_data[quad_offset++] = dummy;
+    /// 上ベクトル
+    quad_data[quad_offset++] = quad.up_[0];
+    quad_data[quad_offset++] = quad.up_[1];
+    quad_data[quad_offset++] = quad.up_[2];
+    quad_data[quad_offset++] = dummy;
     /// 法線
-    const Vec3 normal = Unit(Cross(quad.right_, quad.up_));
-    quad_data[quad_offset++] = normal[0];
-    quad_data[quad_offset++] = normal[1];
-    quad_data[quad_offset++] = normal[2];
-    quad_data[quad_offset++] = -Dot(normal, quad.center_);
-    /// 右ベクトル(逆数)
-    const Vec3 inv_right = Inv(quad.right_);
-    quad_data[quad_offset++] = inv_right[0];
-    quad_data[quad_offset++] = inv_right[1];
-    quad_data[quad_offset++] = inv_right[2];
-    quad_data[quad_offset++] = -Dot(inv_right, quad.center_);
-    /// 左ベクトル(逆数)
-    const Vec3 inv_up = Inv(quad.up_);
-    quad_data[quad_offset++] = inv_up[0];
-    quad_data[quad_offset++] = inv_up[1];
-    quad_data[quad_offset++] = inv_up[2];
-    quad_data[quad_offset++] = -Dot(inv_up, quad.center_);
+    quad_data[quad_offset++] = quad.norm_[0];
+    quad_data[quad_offset++] = quad.norm_[1];
+    quad_data[quad_offset++] = quad.norm_[2];
+    quad_data[quad_offset++] = dummy;
+    /// W = n / dot(n, n)
+    quad_data[quad_offset++] = quad.w_[0];
+    quad_data[quad_offset++] = quad.w_[1];
+    quad_data[quad_offset++] = quad.w_[2];
+    /// D = n_x q_x + n_y q_y + n_z q_z
+    quad_data[quad_offset++] = quad.d_;
     /// カラー
     quad_data[quad_offset++] = quad.color_[0];
     quad_data[quad_offset++] = quad.color_[1];

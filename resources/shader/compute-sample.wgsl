@@ -6,7 +6,7 @@ const kXup = vec3f(1.0, 0.0, 0.0);
 const kYup = vec3f(0.0, 1.0, 0.0);
 const kZup = vec3f(0.0, 0.0, 1.0);
 const kRayDepth = 5;
-const kRayMin = 0.0001;
+const kRayMin = 1e-8;
 const kRayMax = 1e20;
 const kSPP = 10;
 const kBG = vec3f(0.2,0.2, 0.2);
@@ -55,9 +55,12 @@ struct Tri {
 };
 
 struct Quad {
-  norm : vec4f,
+  pos : vec4f,
   right : vec4f,
   up : vec4f,
+  norm : vec4f,
+  w : vec3f,
+  d : f32,
   col : vec3f,
   emissive : f32,
 };
@@ -68,6 +71,10 @@ struct Sphere {
   col : vec3f,
   emissive : f32,
 };
+
+fn fabs(x: f32) -> f32 {
+  return select(x, -x, x < 0.0);
+}
 
 fn point_at(r: Ray, t: f32) -> vec3f {
   return r.start.xyz + t * r.dir.xyz;
@@ -143,6 +150,12 @@ fn onb_local(onb: ONB, a: vec3f) -> vec3f {
   return a.x * onb.u + a.y * onb.v + a.z * onb.w;
 }
 
+fn sample_test_dir(pos: vec3f) -> vec3f {
+  var sphere = spheres[0u];
+  var dir = sphere.center - pos;
+  return dir;
+}
+
 fn sample_sphere_light_dir(pos: vec3f) -> vec3f {
   // FIXME: 決めうちでライトを取得している
   var sphere = spheres[0u];
@@ -198,6 +211,9 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
 fn raytrace(path: Path, depth: i32) -> Path {
   var r = path.ray;
   var hit = sample_hit(r);
+//  if (hit.shape == 1u) {
+//    return Path(r, vec3f(1.0, 0.0, 1.0), true);
+//  }
   let emissive = hit.emissive;
   // 光源の場合、トレースを終了
   if (emissive) {
@@ -244,7 +260,6 @@ fn sample_hit(r: Ray) -> HitInfo {
 
 /// Möller–Trumbore intersection algorithm
 fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
-  var hit = false;
   // 一時変数に格納
   let tri = tris[id];
   let start = r.start.xyz;
@@ -274,31 +289,40 @@ fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
     return closest;
   }
   let pos = point_at(r, t);
-  let norm = face_norm(r, tri.norm.xyz);
   let ray_dist = distance(pos, start);
+  if (ray_dist >= closest.dist) {
+    return closest;
+  }
+  let norm = face_norm(r, tri.norm.xyz);
   return HitInfo(ray_dist, bool(tri.emissive), 0u, id, pos, norm, closest.uv, tri.col);
 }
 
+/// quad form RayTracingTheNextWeek
+/// https://raytracing.github.io/books/RayTracingTheNextWeek.html#quadrilaterals/interiortestingoftheintersectionusinguvcoordinates
 fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
-  let q = quads[id];
-  let plane_dist = dot(q.norm, vec4(r.start.xyz, 1.0));
-  let ray_dist = plane_dist / -dot(q.norm.xyz, r.dir.xyz);
-  let pos = r.start.xyz + r.dir.xyz * ray_dist;
-  let uv = vec2f(dot(vec4f(pos, 1.0), q.right), dot(vec4f(pos, 1.0), q.up)) * 0.5 + 0.5;
-  let hit = plane_dist > 0.0 &&
-            ray_dist > 0.0 &&
-            ray_dist < closest.dist &&
-            all((uv > vec2f()) & (uv < vec2f(1.0)));
-  return HitInfo(
-    select(closest.dist, ray_dist, hit),
-    select(closest.emissive, bool(q.emissive), hit),
-    select(closest.shape, 1u, hit),
-    select(closest.id, id, hit),
-    select(closest.pos, pos, hit),
-    select(closest.norm, q.norm.xyz, hit),
-    select(closest.uv, uv, hit),
-    select(closest.col, q.col, hit),
-  );
+  let quad = quads[id];
+  let denom = dot(quad.norm.xyz, r.dir.xyz);
+  if (fabs(denom) < kRayMin) {
+    return closest;
+  }
+  let t = (quad.d - dot(quad.norm.xyz, r.start.xyz)) / denom;
+  if (t < kRayMin || kRayMax < t) {
+    return closest;
+  }
+  let pos = point_at(r, t);
+  let ray_dist = distance(pos, r.start.xyz);
+  if (ray_dist >= closest.dist) {
+    return closest;
+  }
+  let hit_vec = pos - quad.pos.xyz;
+  let a = dot(quad.w, cross(hit_vec, quad.up.xyz));
+  let b = dot(quad.w, cross(quad.right.xyz, hit_vec));
+  if ((a < 0.0) || (1.0 < a) || (b < 0.0) || (1.0 < b)) {
+    return closest;
+  }
+  let norm = face_norm(r, quad.norm.xyz);
+  let uv = vec2f(a, b);
+  return HitInfo(ray_dist, bool(quad.emissive), 1u, id, pos, norm, uv, quad.col);
 }
 
 fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
@@ -322,9 +346,12 @@ fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
     }
   }
   let pos = point_at(r, root);
+  let ray_dist = distance(pos, r.start.xyz);
+  if (ray_dist >= closest.dist) {
+    return closest;
+  }
   let norm = face_norm(r, (pos - sphere.center) / sphere.radius);
   let uv = sphere_uv(norm);
-  let ray_dist = distance(pos, r.start.xyz);
   return HitInfo(ray_dist, bool(sphere.emissive), 2u, id, pos, norm, uv, sphere.col);
 }
 
