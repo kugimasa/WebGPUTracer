@@ -24,11 +24,13 @@ struct Ray {
 /// shape: tri(0), quad(1), sphere(2)
 struct HitInfo {
   dist : f32,
+  emissive : bool,
+  shape : u32,
+  id : u32,
   pos : vec3f,
   norm : vec3f,
   uv : vec2f,
   col : vec3f,
-  flags : vec4f, // (emissive, _, _, _)
 };
 
 struct ONB {
@@ -196,9 +198,9 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
 fn raytrace(path: Path, depth: i32) -> Path {
   var r = path.ray;
   var hit = sample_hit(r);
-  let emissive = hit.flags.x;
+  let emissive = hit.emissive;
   // 光源の場合、トレースを終了
-  if (emissive > 0.0) {
+  if (emissive) {
     if (depth == 0) {
       return Path(r, hit.col, true);
     }
@@ -224,8 +226,10 @@ fn raytrace(path: Path, depth: i32) -> Path {
 fn sample_hit(r: Ray) -> HitInfo {
   var hit = HitInfo();
   hit.dist = kRayMax;
+  hit.shape = kNoHit;
+  hit.id = kNoHit;
+  hit.emissive = false;
   hit.col = kBG;
-  hit.flags = vec4f(0.0, 0.0, 0.0, 0.0);
   for (var tri = 0u; tri < arrayLength(&tris); tri++) {
     hit = intersect_tri(r, tri, hit);
   }
@@ -250,29 +254,29 @@ fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let e2 = tri.e2.xyz;
   let p_vec = cross(dir, e2);
   let det = dot(e1, p_vec);
+  if (det <= 0.0) {
+    return closest;
+  }
   let inv_det = 1.0 / det;
   // 交差判定
   let t_vec = start - vert;
   let u = dot(t_vec, p_vec) * inv_det;
+  if (u < 0.0 || 1.0 < u) {
+    return closest;
+  }
   let q_vec = cross(t_vec, e1);
   let v = dot(dir, q_vec) * inv_det;
+  if (v < 0.0 || 1.0 < u + v) {
+    return closest;
+  }
   let t = dot(e2, q_vec) * inv_det;
+  if (t < kRayMin || kRayMax < t) {
+    return closest;
+  }
   let pos = point_at(r, t);
   let norm = face_norm(r, tri.norm.xyz);
   let ray_dist = distance(pos, start);
-  let flags = vec4f(tri.emissive, 0.0, 0.0, 0.0);
-  hit = ray_dist < closest.dist &&
-        (0.0 <= u && u <= 1.0) &&
-        (0.0 <= v && (u + v) <= 1.0);
-
-  return HitInfo(
-    select(closest.dist, ray_dist, hit),
-    select(closest.pos, pos, hit),
-    select(closest.norm, norm, hit),
-    closest.uv,
-    select(closest.col, tri.col, hit),
-    select(closest.flags, flags, hit),
-  );
+  return HitInfo(ray_dist, bool(tri.emissive), 0u, id, pos, norm, closest.uv, tri.col);
 }
 
 fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
@@ -281,18 +285,19 @@ fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let ray_dist = plane_dist / -dot(q.norm.xyz, r.dir.xyz);
   let pos = r.start.xyz + r.dir.xyz * ray_dist;
   let uv = vec2f(dot(vec4f(pos, 1.0), q.right), dot(vec4f(pos, 1.0), q.up)) * 0.5 + 0.5;
-  let flags = vec4f(q.emissive, 0.0, 0.0, 0.0);
   let hit = plane_dist > 0.0 &&
             ray_dist > 0.0 &&
             ray_dist < closest.dist &&
             all((uv > vec2f()) & (uv < vec2f(1.0)));
   return HitInfo(
     select(closest.dist, ray_dist, hit),
+    select(closest.emissive, bool(q.emissive), hit),
+    select(closest.shape, 1u, hit),
+    select(closest.id, id, hit),
     select(closest.pos, pos, hit),
     select(closest.norm, q.norm.xyz, hit),
     select(closest.uv, uv, hit),
     select(closest.col, q.col, hit),
-    select(closest.flags, flags, hit),
   );
 }
 
@@ -304,27 +309,23 @@ fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let half_b = dot(oc, dir);
   let c = dot(oc, oc) - sphere.radius * sphere.radius;
   let discriminant = half_b * half_b - a * c;
+  if (discriminant < 0.0) {
+    return closest;
+  }
   let sqrt_d = sqrt(discriminant);
   // 最近傍のrootを探す
   var root = (-half_b - sqrt_d) / a;
   if (root < kRayMin || kRayMax < root) {
     root = (-half_b + sqrt_d) / a;
+    if (root < kRayMin || kRayMax < root) {
+      return closest;
+    }
   }
   let pos = point_at(r, root);
   let norm = face_norm(r, (pos - sphere.center) / sphere.radius);
   let uv = sphere_uv(norm);
   let ray_dist = distance(pos, r.start.xyz);
-  let flags = vec4f(sphere.emissive, 0.0, 0.0, 0.0);
-  let hit = ray_dist < closest.dist &&
-            discriminant >= 0.0;
-  return HitInfo(
-    select(closest.dist, ray_dist, hit),
-    select(closest.pos, pos, hit),
-    select(closest.norm, norm, hit),
-    select(closest.uv, uv, hit),
-    select(closest.col, sphere.col, hit),
-    select(closest.flags, flags, hit),
-  );
+  return HitInfo(ray_dist, bool(sphere.emissive), 2u, id, pos, norm, uv, sphere.col);
 }
 
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;

@@ -11,17 +11,24 @@
  */
 Scene::Scene(Device &device) {
   /// Triangleの追加
-  Vertex v0(Point3(0, 0, 0), Vec3(1, 0, 0), 0, 1);
-  Triangle dummy(v0, v0, v0, Color3(0.0, 0.0, 0.0));
-  tris_.push_back(dummy);
-  // LoadObj(RESOURCE_DIR "/obj/chill-ball.obj", Color3(0.5, 0.5, 0.5), Vec3(0, 0, -10));
+  auto v0 = Vertex(Point3(0.0, 2, -11), Vec3(), 0, 0);
+  auto v1 = Vertex(Point3(1, 2, -9), Vec3(), 0, 0);
+  auto v2 = Vertex(Point3(-1, 2, -9), Vec3(), 0, 0);
+  tris_.emplace_back(v0, v1, v2, Color3(0.2, 0.1, 0.8));
+  // LoadObj(RESOURCE_DIR "/obj/chill-ball.obj", Color3(7.0, 7.0, 7.0), Vec3(-2, -2, -6), true);
   /// Quadの追加
   auto pos = Point3(0, 0, -9);
   auto scale = Vec3(6, 6, 6);
   auto cb = CornellBox(pos, scale);
+  pos = Point3(-2.0, 0, -9);
+  auto right = Vec3(0, 0, -1.0);
+  auto up = Vec3(0, 1.0, 0);
+  quads_.emplace_back(pos, right, up, Color3(0.0, 0.2, 0.5));
   cb.PushToQuads(quads_);
+
   /// Sphereの追加
-  spheres_.emplace_back(Point3(0, 0, -9), 1, Color3(7, 7, 7), true);
+  spheres_.emplace_back(Point3(0, 0, -9), 0.5, Color3(20, 20, 20), true);
+  spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.0, 0.2, 0.5));
   /// バッファのバインド
   InitBindGroupLayout(device);
   InitBuffers(device);
