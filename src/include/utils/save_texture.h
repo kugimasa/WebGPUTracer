@@ -28,6 +28,7 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
   pixelBufferDesc.mappedAtCreation = false;
   pixelBufferDesc.usage = BufferUsage::MapRead | BufferUsage::CopyDst;
   pixelBufferDesc.size = paddedBytesPerRow * height;
+  pixelBufferDesc.label = "PixelBuffer";
   Buffer pixelBuffer = device.createBuffer(pixelBufferDesc);
 
   // Start encoding the commands
@@ -56,10 +57,8 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
       if (status != BufferMapAsyncStatus::Success) {
         success = false;
       } else {
-        const unsigned char *pixelData = (const unsigned char *) pixelBuffer.getConstMappedRange(0,
-                                                                                                 pixelBufferDesc.size);
-        int writeSuccess = stbi_write_png(path.string().c_str(), (int) width, (int) height, (int) channels, pixelData,
-                                          paddedBytesPerRow);
+        const auto *pixelData = (const unsigned char *) pixelBuffer.getConstMappedRange(0, pixelBufferDesc.size);
+        int writeSuccess = stbi_write_png(path.string().c_str(), (int) width, (int) height, (int) channels, pixelData, (int) paddedBytesPerRow);
 
         pixelBuffer.unmap();
 
