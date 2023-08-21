@@ -10,12 +10,6 @@
  * コンストラクタ
  */
 Scene::Scene(Device &device) {
-  /// Triangleの追加
-  auto v0 = Vertex(Point3(0.0, 2, -11), Vec3(), 0, 0);
-  auto v1 = Vertex(Point3(1, 2, -9), Vec3(), 0, 0);
-  auto v2 = Vertex(Point3(-1, 2, -9), Vec3(), 0, 0);
-  tris_.emplace_back(v0, v1, v2, Color3(0.2, 0.1, 0.8));
-  // LoadObj(RESOURCE_DIR "/obj/chill-ball.obj", Color3(7.0, 7.0, 7.0), Vec3(-2, -2, -6), true);
   /// Quadの追加
   /// FIXME: 以下テスト用
   auto pos = Point3(0, 0, -9);
@@ -49,8 +43,6 @@ Scene::Scene(Device &device) {
  */
 void Scene::Release() {
   storage_.bind_group_.release();
-  tri_buffer_.destroy();
-  tri_buffer_.release();
   quad_buffer_.destroy();
   quad_buffer_.release();
   sphere_buffer_.destroy();
@@ -143,19 +135,15 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
  * BindGroupLayoutの初期化
  */
 void Scene::InitBindGroupLayout(Device &device) {
-  std::vector<BindGroupLayoutEntry> bindings(3, Default);
-  /// Scene: Tris
+  std::vector<BindGroupLayoutEntry> bindings(2, Default);
+  /// Scene: Quads
   bindings[0].binding = 0;
   bindings[0].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[0].visibility = ShaderStage::Compute;
-  /// Scene: Quads
+  /// Scene: Sphere
   bindings[1].binding = 1;
   bindings[1].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[1].visibility = ShaderStage::Compute;
-  /// Scene: Sphere
-  bindings[2].binding = 2;
-  bindings[2].buffer.type = BufferBindingType::ReadOnlyStorage;
-  bindings[2].visibility = ShaderStage::Compute;
   /// BindGroupLayoutの作成
   BindGroupLayoutDescriptor bind_group_layout_desc{};
   bind_group_layout_desc.entryCount = (uint32_t) bindings.size();
@@ -168,7 +156,6 @@ void Scene::InitBindGroupLayout(Device &device) {
  * Buffer作成
  */
 void Scene::InitBuffers(Device &device) {
-  tri_buffer_ = CreateTriangleBuffer(device);
   quad_buffer_ = CreateQuadBuffer(device);
   sphere_buffer_ = CreateSphereBuffer(device);
 }
@@ -321,22 +308,17 @@ Buffer Scene::CreateSphereBuffer(Device &device) {
  */
 void Scene::InitBindGroup(Device &device) {
   /// BindGroup を作成
-  std::vector<BindGroupEntry> entries(3, Default);
-  /// TriBuffer
-  entries[0].binding = 0;
-  entries[0].buffer = tri_buffer_;
-  entries[0].offset = 0;
-  entries[0].size = tri_buffer_size_;
+  std::vector<BindGroupEntry> entries(2, Default);
   /// QuadBuffer
-  entries[1].binding = 1;
-  entries[1].buffer = quad_buffer_;
-  entries[1].offset = 0;
-  entries[1].size = quad_buffer_size_;
+  entries[0].binding = 0;
+  entries[0].buffer = quad_buffer_;
+  entries[0].offset = 0;
+  entries[0].size = quad_buffer_size_;
   /// SphereBuffer
-  entries[2].binding = 2;
-  entries[2].buffer = sphere_buffer_;
-  entries[2].offset = 0;
-  entries[2].size = sphere_buffer_size_;
+  entries[1].binding = 1;
+  entries[1].buffer = sphere_buffer_;
+  entries[1].offset = 0;
+  entries[1].size = sphere_buffer_size_;
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = storage_.bind_group_layout_;
   bind_group_desc.entryCount = (uint32_t) entries.size();

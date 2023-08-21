@@ -231,9 +231,8 @@ fn scattering_pdf(hit: HitInfo, dir: vec3f) -> f32 {
 }
 
 @group(0) @binding(0) var<uniform> ray : Ray;
-@group(1) @binding(0) var<storage> tris : array<Tri>;
-@group(1) @binding(1) var<storage> quads : array<Quad>;
-@group(1) @binding(2) var<storage> spheres : array<Sphere>;
+@group(1) @binding(0) var<storage> quads : array<Quad>;
+@group(1) @binding(1) var<storage> spheres : array<Sphere>;
 
 fn setup_camera_ray(uv: vec2f) -> Ray {
     let theta = radians(kFovy);
@@ -280,10 +279,7 @@ fn sample_hit(r: Ray) -> HitInfo {
   hit.shape = kNoHit;
   hit.id = kNoHit;
   hit.emissive = false;
-  hit.col = kBG;
-  for (var tri = 0u; tri < arrayLength(&tris); tri++) {
-    hit = intersect_tri(r, tri, hit);
-  }
+  hit.col = kZero;
   for (var quad = 0u; quad < arrayLength(&quads); quad++) {
     hit = intersect_quad(r, quad, hit);
   }
@@ -294,43 +290,43 @@ fn sample_hit(r: Ray) -> HitInfo {
 }
 
 /// Möller–Trumbore intersection algorithm
-fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
-  // 一時変数に格納
-  let tri = tris[id];
-  let start = r.start.xyz;
-  let dir = r.dir.xyz;
-  let vert = tri.vert.xyz;
-  let e1 = tri.e1.xyz;
-  let e2 = tri.e2.xyz;
-  let p_vec = cross(dir, e2);
-  let det = dot(e1, p_vec);
-  if (det <= 0.0) {
-    return closest;
-  }
-  let inv_det = 1.0 / det;
-  // 交差判定
-  let t_vec = start - vert;
-  let u = dot(t_vec, p_vec) * inv_det;
-  if (u < 0.0 || 1.0 < u) {
-    return closest;
-  }
-  let q_vec = cross(t_vec, e1);
-  let v = dot(dir, q_vec) * inv_det;
-  if (v < 0.0 || 1.0 < u + v) {
-    return closest;
-  }
-  let t = dot(e2, q_vec) * inv_det;
-  if (t < kRayMin || kRayMax < t) {
-    return closest;
-  }
-  let pos = point_at(r, t);
-  let ray_dist = distance(pos, start);
-  if (ray_dist >= closest.dist) {
-    return closest;
-  }
-  let norm = face_norm(r, tri.norm.xyz);
-  return HitInfo(ray_dist, bool(tri.emissive), 0u, id, pos, norm, closest.uv, tri.col);
-}
+//fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
+//  // 一時変数に格納
+//  let tri = tris[id];
+//  let start = r.start.xyz;
+//  let dir = r.dir.xyz;
+//  let vert = tri.vert.xyz;
+//  let e1 = tri.e1.xyz;
+//  let e2 = tri.e2.xyz;
+//  let p_vec = cross(dir, e2);
+//  let det = dot(e1, p_vec);
+//  if (det <= 0.0) {
+//    return closest;
+//  }
+//  let inv_det = 1.0 / det;
+//  // 交差判定
+//  let t_vec = start - vert;
+//  let u = dot(t_vec, p_vec) * inv_det;
+//  if (u < 0.0 || 1.0 < u) {
+//    return closest;
+//  }
+//  let q_vec = cross(t_vec, e1);
+//  let v = dot(dir, q_vec) * inv_det;
+//  if (v < 0.0 || 1.0 < u + v) {
+//    return closest;
+//  }
+//  let t = dot(e2, q_vec) * inv_det;
+//  if (t < kRayMin || kRayMax < t) {
+//    return closest;
+//  }
+//  let pos = point_at(r, t);
+//  let ray_dist = distance(pos, start);
+//  if (ray_dist >= closest.dist) {
+//    return closest;
+//  }
+//  let norm = face_norm(r, tri.norm.xyz);
+//  return HitInfo(ray_dist, bool(tri.emissive), 0u, id, pos, norm, closest.uv, tri.col);
+//}
 
 /// quad form RayTracingTheNextWeek
 /// https://raytracing.github.io/books/RayTracingTheNextWeek.html#quadrilaterals/interiortestingoftheintersectionusinguvcoordinates
