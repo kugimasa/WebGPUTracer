@@ -1,0 +1,38 @@
+name: Windows Build Dawn
+
+on:
+  workflow_dispatch: {}
+
+env:
+  BUILD_TYPE: Release
+  WEBGPU_BACKEND: DAWN
+  DEV_MODE: OFF
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        submodules: recursive
+
+    - name: Configure CMake
+      run: > 
+        cmake -B ${{github.workspace}}/build 
+        -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        -DWEBGPU_BACKEND=${{env.WEBGPU_BACKEND}}
+        -DDEV_MODE=${{env.DEV_MODE}}
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Render
+      run: ${{github.workspace}}/build/Release/Portracer.exe
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v3.1.0
+      with:
+        name: windows_build
+        path: ${{github.workspace}}/build
