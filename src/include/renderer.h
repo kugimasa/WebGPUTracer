@@ -10,9 +10,9 @@ class Renderer {
 public:
     bool OnInit(bool hasWindow);
 
-    void OnCompute();
+    bool OnCompute();
 
-    void OnRender(int frame);
+    bool OnRender(int frame);
 
     void OnFrame();
 

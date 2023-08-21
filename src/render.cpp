@@ -342,14 +342,15 @@ void Renderer::InitBindGroup() {
 }
 
 /// \brief Compute pass
-void Renderer::OnCompute() {
+bool Renderer::OnCompute() {
   Print(PrintInfoType::Portracer, "Running compute pass ...");
+  auto success = false;
   // chrono変数
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
   start = std::chrono::system_clock::now();
   for (uint32_t i = 0; i < MAX_FRAME; ++i) {
-    OnRender(i);
+    success = OnRender(i);
   }
   queue_.release();
   // 時間計測終了
@@ -357,11 +358,12 @@ void Renderer::OnCompute() {
   // 経過時間の算出
   double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::ostringstream sout;
-  sout << elapsed * 0.001 << "(sec)s" << std::endl;
+  sout << elapsed * 0.001 << "(sec)s";
   Print(PrintInfoType::Portracer, "Finished: ", sout.str());
+  return success;
 }
 
-void Renderer::OnRender(int frame) {
+bool Renderer::OnRender(int frame) {
   // chrono変数
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
@@ -418,6 +420,7 @@ void Renderer::OnRender(int frame) {
   std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
   if (!saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */)) {
     Error(PrintInfoType::Portracer, "Image output failed.");
+    return false;
   }
   // Clean up
   commands.release();
@@ -428,6 +431,7 @@ void Renderer::OnRender(int frame) {
   // 経過時間の算出
   double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::cout << "[" << sout.str() << "]: " << elapsed * 0.001 << "(sec)s" << std::endl;
+  return true;
 }
 
 /// \brief Called every frame

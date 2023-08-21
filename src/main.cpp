@@ -14,7 +14,10 @@ int main() {
   }
 
   // ComputePipeline
-  renderer.OnCompute();
+  if (!renderer.OnCompute()) {
+    Error(PrintInfoType::Portracer, "(_)=--.. Something went wrong");
+    return 1;
+  }
 
   renderer.OnFinish();
   Print(PrintInfoType::Portracer, "(_)=---=(_) Portracer Finished");
