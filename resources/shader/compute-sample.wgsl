@@ -262,7 +262,7 @@ fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   }
   let q_vec = cross(t_vec, e1);
   let v = dot(dir, q_vec) * inv_det;
-  if (v < 0.0 || 1.0 < u + v) {
+  if (v < 0.0 || 1.0 < (u + v)) {
     return closest;
   }
   let t = dot(e2, q_vec) * inv_det;
