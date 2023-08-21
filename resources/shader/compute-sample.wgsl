@@ -273,7 +273,7 @@ fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let norm = face_norm(r, tri.norm.xyz);
   let ray_dist = distance(pos, start);
   let flags = vec4f(tri.emissive, 0.0, 0.0, 0.0);
-  return HitInfo(closest.dist, closest.pos,  norm, closest.uv, closest.col, flags);
+  return HitInfo(closest.dist, closest.pos,  closest.norm, closest.uv, closest.col, flags);
 }
 
 fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
