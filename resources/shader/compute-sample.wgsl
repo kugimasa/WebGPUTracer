@@ -82,7 +82,7 @@ fn point_at(r: Ray, t: f32) -> vec3f {
 }
 
 fn face_norm(r: Ray, norm: vec3f) -> vec3f {
-  return select(-norm, norm, dot(r.dir.xyz, norm) < 0.0);
+  return select(-norm, norm, dot(r.dir.xyz, norm.xyz) < 0.0);
 }
 
 fn sphere_uv(norm: vec3f) -> vec2f {
@@ -324,7 +324,7 @@ fn sample_hit(r: Ray) -> HitInfo {
 //  if (ray_dist >= closest.dist) {
 //    return closest;
 //  }
-//  let norm = face_norm(r, tri.norm.xyz);
+//  let norm = faceForward(tri.norm.xyz, r.dir.xyz, tri.norm.xyz);
 //  return HitInfo(ray_dist, bool(tri.emissive), 0u, id, pos, norm, closest.uv, tri.col);
 //}
 
@@ -351,7 +351,7 @@ fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   if ((a < 0.0) || (1.0 < a) || (b < 0.0) || (1.0 < b)) {
     return closest;
   }
-  let norm = face_norm(r, quad.norm.xyz);
+  let norm = faceForward(quad.norm.xyz, r.dir.xyz, quad.norm.xyz);
   let uv = vec2f(a, b);
   return HitInfo(ray_dist, bool(quad.emissive), 1u, id, pos, norm, uv, quad.col);
 }
@@ -381,7 +381,8 @@ fn intersect_sphere(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   if (ray_dist >= closest.dist) {
     return closest;
   }
-  let norm = face_norm(r, (pos - sphere.center) / sphere.radius);
+  let sphere_norm = (pos - sphere.center) / sphere.radius;
+  let norm = faceForward(sphere_norm, r.dir.xyz, sphere_norm);
   let uv = sphere_uv(norm);
   return HitInfo(ray_dist, bool(sphere.emissive), 2u, id, pos, norm, uv, sphere.col);
 }
