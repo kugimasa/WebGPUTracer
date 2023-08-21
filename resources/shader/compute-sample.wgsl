@@ -240,7 +240,6 @@ fn sample_hit(r: Ray) -> HitInfo {
 
 /// Möller–Trumbore intersection algorithm
 fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
-  var hit = false;
   // 一時変数に格納
   let tri = tris[id];
   let start = r.start.xyz;
