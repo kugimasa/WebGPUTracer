@@ -56,6 +56,7 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
   auto callbackHandle = pixelBuffer.mapAsync(MapMode::Read, 0, pixelBufferDesc.size, [&](BufferMapAsyncStatus status) {
       if (status != BufferMapAsyncStatus::Success) {
         success = false;
+        std::cout << "PixelBuffer MapAsync error: type " << status << std::endl;
       } else {
         const auto *pixelData = (const unsigned char *) pixelBuffer.getConstMappedRange(0, pixelBufferDesc.size);
         int writeSuccess = stbi_write_png(path.string().c_str(), (int) width, (int) height, (int) channels, pixelData, (int) paddedBytesPerRow);
