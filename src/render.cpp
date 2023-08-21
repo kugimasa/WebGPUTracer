@@ -103,7 +103,13 @@ bool Renderer::InitDevice() {
   Print(PrintInfoType::WebGPU, "Got device: ", device_);
 
   // Error handling
-  device_.setUncapturedErrorCallback(OnDeviceError);
+  auto onDeviceError = [](WGPUErrorType type, char const *message, void * /* pUserData */) {
+      std::cout << "Uncaptured device error: type " << type;
+      if (message) std::cout << " (" << message << ")";
+      std::cout << std::endl;
+  };
+  wgpuDeviceSetUncapturedErrorCallback(device_, onDeviceError, nullptr /* pUserData */);
+
 #ifdef WEBGPU_BACKEND_DAWN
   // Device lost callback
   wgpuDeviceSetDeviceLostCallback(device_, [](WGPUDeviceLostReason reason, char const *message, void *) {
@@ -336,14 +342,15 @@ void Renderer::InitBindGroup() {
 }
 
 /// \brief Compute pass
-void Renderer::OnCompute() {
+bool Renderer::OnCompute() {
   Print(PrintInfoType::Portracer, "Running compute pass ...");
+  auto success = false;
   // chrono変数
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
   start = std::chrono::system_clock::now();
   for (uint32_t i = 0; i < MAX_FRAME; ++i) {
-    OnRender(i);
+    success = OnRender(i);
   }
   queue_.release();
   // 時間計測終了
@@ -351,19 +358,19 @@ void Renderer::OnCompute() {
   // 経過時間の算出
   double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::ostringstream sout;
-  sout << elapsed * 0.001 << "(sec)s" << std::endl;
+  sout << elapsed * 0.001 << "(sec)s";
   Print(PrintInfoType::Portracer, "Finished: ", sout.str());
+  return success;
 }
 
-void Renderer::OnRender(int frame) {
-#ifndef NDEBUG
+bool Renderer::OnRender(int frame) {
   // chrono変数
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
   start = std::chrono::system_clock::now();
-#endif
   /// Update camera
-  Point3 origin = Vec3(0, 0, 0);
+  /// NOTE: 原点が(0, 0, 0)だと描画がうまくいかないことがある(FarのQuadなど)
+  Point3 origin = Vec3(0, 0, 0.01);
   Point3 target = Vec3(0, 0, 15);
   float aspect = (float) WIDTH / (float) HEIGHT;
   float time = 0.0f;
@@ -411,18 +418,20 @@ void Renderer::OnRender(int frame) {
   std::ostringstream sout;
   sout << std::setw(3) << std::setfill('0') << frame;
   std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
-  saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */);
+  if (!saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */)) {
+    Error(PrintInfoType::Portracer, "Image output failed.");
+    return false;
+  }
   // Clean up
   commands.release();
   encoder.release();
   compute_pass.release();
-#ifndef NDEBUG
   // 時間計測終了
   end = std::chrono::system_clock::now();
   // 経過時間の算出
   double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::cout << "[" << sout.str() << "]: " << elapsed * 0.001 << "(sec)s" << std::endl;
-#endif
+  return true;
 }
 
 /// \brief Called every frame
