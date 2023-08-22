@@ -4,12 +4,10 @@ const kNoHit = 0xffffffffu;
 const kFovy = 40.0f;
 const kXup = vec3f(1.0, 0.0, 0.0);
 const kYup = vec3f(0.0, 1.0, 0.0);
-const kZup = vec3f(0.0, 0.0, 1.0);
 const kRayDepth = 5;
 const kRayMin = 1e-6;
 const kRayMax = 1e20;
 const kSPP = 10;
-const kBG = vec3f(0.2,0.2, 0.2);
 const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
 
@@ -45,15 +43,6 @@ struct Path {
   col : vec3f,
   end : bool,
 }
-
-struct Tri {
-  vert : vec4f,
-  e1 : vec4f,
-  e2 : vec4f,
-  norm : vec4f,
-  col : vec3f,
-  emissive : f32,
-};
 
 struct Quad {
   pos : vec4f,
@@ -103,45 +92,45 @@ fn rand() -> f32 {
 }
 
 fn rand_unit_sphere() -> vec3f {
-    var u = rand();
-    var v = rand();
-    var theta = u * 2.0 * kPI;
-    var phi = acos(2.0 * v - 1.0);
-    var r = pow(rand(), 1.0/3.0);
-    var sin_theta = sin(theta);
-    var cos_theta = cos(theta);
-    var sin_phi = sin(phi);
-    var cos_phi = cos(phi);
-    var x = r * sin_phi * sin_theta;
-    var y = r * sin_phi * cos_theta;
-    var z = r * cos_phi;
+    let u = rand();
+    let v = rand();
+    let theta = u * 2.0 * kPI;
+    let phi = acos(2.0 * v - 1.0);
+    let r = pow(rand(), 1.0/3.0);
+    let sin_theta = sin(theta);
+    let cos_theta = cos(theta);
+    let sin_phi = sin(phi);
+    let cos_phi = cos(phi);
+    let x = r * sin_phi * sin_theta;
+    let y = r * sin_phi * cos_theta;
+    let z = r * cos_phi;
     return vec3f(x, y, z);
 }
 
 fn rand_to_sphere(radius: f32, square_dist: f32) -> vec3f {
-  var r1 = rand();
-  var r2 = rand();
-  var z = 1.0 + r2 * (sqrt(1.0 - radius * radius / square_dist) - 1.0);
-  var phi = 2.0 * kPI * r1;
-  var x = cos(phi) * sqrt(1.0 - z * z);
-  var y = sin(phi) * sqrt(1.0 - z * z);
+  let r1 = rand();
+  let r2 = rand();
+  let z = 1.0 + r2 * (sqrt(1.0 - radius * radius / square_dist) - 1.0);
+  let phi = 2.0 * kPI * r1;
+  let x = cos(phi) * sqrt(1.0 - z * z);
+  let y = sin(phi) * sqrt(1.0 - z * z);
   return vec3f(x, y, z);
 }
 
 fn rand_cos_dir() -> vec3f {
-  var r1 = rand();
-  var r2 = rand();
-  var z = sqrt(1.0 - r2);
-  var phi = 2.0 * kPI * r1;
-  var x = cos(phi) * sqrt(r2);
-  var y = sin(phi) * sqrt(r2);
+  let r1 = rand();
+  let r2 = rand();
+  let z = sqrt(1.0 - r2);
+  let phi = 2.0 * kPI * r1;
+  let x = cos(phi) * sqrt(r2);
+  let y = sin(phi) * sqrt(r2);
   return vec3f(x, y, z);
 }
 
 fn build_onb_from_w(w: vec3f) -> ONB {
   var onb : ONB;
   onb.w = normalize(w);
-  var a = select(kXup, kYup, (sign(onb.w.x) * onb.w.x) > 0.9);
+  let a = select(kXup, kYup, (sign(onb.w.x) * onb.w.x) > 0.9);
   onb.v = normalize(cross(onb.w, a));
   onb.u = cross(onb.w, onb.v);
   return onb;
@@ -179,9 +168,9 @@ fn sample_from_light(hit: HitInfo) -> vec3f {
 }
 
 fn sample_from_sphere(sphere: Sphere, pos: vec3f) -> vec3f {
-  var dir = sphere.center - pos;
-  var onb = build_onb_from_w(dir);
-  var square_dist = dot(dir, dir);
+  let dir = sphere.center - pos;
+  let onb = build_onb_from_w(dir);
+  let square_dist = dot(dir, dir);
   return onb_local(onb, rand_to_sphere(sphere.radius, square_dist));
 }
 
@@ -201,8 +190,8 @@ fn sample_from_bxdf(hit: HitInfo) -> vec3f {
 }
 
 fn sample_from_cosine(hit: HitInfo) -> vec3f {
-  var onb = build_onb_from_w(hit.norm);
-  var a = rand_cos_dir();
+  let onb = build_onb_from_w(hit.norm);
+  let a = rand_cos_dir();
   return onb_local(onb, a);
 }
 
@@ -212,21 +201,21 @@ fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
 
 fn sphere_pdf(hit: HitInfo, dir: vec3f) -> f32 {
   // FIXME: 決めうちでライトを取得している
-  var sphere = spheres[0u];
-  var squared_dist = dot(sphere.center - hit.pos, sphere.center - hit.pos);
-  var cos_theta_max = sqrt(1.0 - sphere.radius * sphere.radius / squared_dist);
-  var solid_angle = 2.0 * kPI * (1.0 - cos_theta_max);
+  let sphere = spheres[0u];
+  let squared_dist = dot(sphere.center - hit.pos, sphere.center - hit.pos);
+  let cos_theta_max = sqrt(1.0 - sphere.radius * sphere.radius / squared_dist);
+  let solid_angle = 2.0 * kPI * (1.0 - cos_theta_max);
   return 1.0 / solid_angle;
 }
 
 fn cosine_pdf(hit: HitInfo, dir: vec3f) -> f32 {
-  var onb = build_onb_from_w(hit.norm);
-  var cos = dot(normalize(dir), onb.w);
+  let onb = build_onb_from_w(hit.norm);
+  let cos = dot(normalize(dir), onb.w);
   return select(cos * k_1_PI, 0.0, cos <= 0.0);
 }
 
 fn scattering_pdf(hit: HitInfo, dir: vec3f) -> f32 {
-  var cos = dot(hit.norm, normalize(dir));
+  let cos = dot(hit.norm, normalize(dir));
   return select(cos * k_1_PI, 0.0, cos < 0.0);
 }
 
@@ -249,8 +238,8 @@ fn setup_camera_ray(uv: vec2f) -> Ray {
 }
 
 fn raytrace(path: Path, depth: i32) -> Path {
-  var r = path.ray;
-  var hit = sample_hit(r);
+  let r = path.ray;
+  let hit = sample_hit(r);
   let emissive = hit.emissive;
   // 光源の場合、トレースを終了
   if (emissive) {
@@ -258,17 +247,17 @@ fn raytrace(path: Path, depth: i32) -> Path {
       return Path(r, hit.col, true);
     }
     // 照明計算
-    var ray_col = hit.col * path.col;
+    let ray_col = hit.col * path.col;
     return Path(r, ray_col, true);
   }
   // 反射オブジェクトの場合
   else {
     // 反射
-    var scatter_dir = sample_direction(hit);
-    var pdf_val = mixture_pdf(hit, scatter_dir);
+    let scatter_dir = sample_direction(hit);
+    let pdf_val = mixture_pdf(hit, scatter_dir);
     // パスを更新
-    var scattered_ray = Ray(vec4f(hit.pos, 1.0), vec4f(scatter_dir, 1.0), r.aspect, r.time, r.seed);
-    var scattered_col = path.col * hit.col * scattering_pdf(hit, scatter_dir) / pdf_val;
+    let scattered_ray = Ray(vec4f(hit.pos, 1.0), vec4f(scatter_dir, 1.0), r.aspect, r.time, r.seed);
+    let scattered_col = path.col * hit.col * scattering_pdf(hit, scatter_dir) / pdf_val;
     return Path(scattered_ray, scattered_col, false);
   }
 }
@@ -288,45 +277,6 @@ fn sample_hit(r: Ray) -> HitInfo {
   }
   return hit;
 }
-
-/// Möller–Trumbore intersection algorithm
-//fn intersect_tri(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
-//  // 一時変数に格納
-//  let tri = tris[id];
-//  let start = r.start.xyz;
-//  let dir = r.dir.xyz;
-//  let vert = tri.vert.xyz;
-//  let e1 = tri.e1.xyz;
-//  let e2 = tri.e2.xyz;
-//  let p_vec = cross(dir, e2);
-//  let det = dot(e1, p_vec);
-//  if (det <= 0.0) {
-//    return closest;
-//  }
-//  let inv_det = 1.0 / det;
-//  // 交差判定
-//  let t_vec = start - vert;
-//  let u = dot(t_vec, p_vec) * inv_det;
-//  if (u < 0.0 || 1.0 < u) {
-//    return closest;
-//  }
-//  let q_vec = cross(t_vec, e1);
-//  let v = dot(dir, q_vec) * inv_det;
-//  if (v < 0.0 || 1.0 < u + v) {
-//    return closest;
-//  }
-//  let t = dot(e2, q_vec) * inv_det;
-//  if (t < kRayMin || kRayMax < t) {
-//    return closest;
-//  }
-//  let pos = point_at(r, t);
-//  let ray_dist = distance(pos, start);
-//  if (ray_dist >= closest.dist) {
-//    return closest;
-//  }
-//  let norm = faceForward(tri.norm.xyz, r.dir.xyz, tri.norm.xyz);
-//  return HitInfo(ray_dist, bool(tri.emissive), 0u, id, pos, norm, closest.uv, tri.col);
-//}
 
 /// quad form RayTracingTheNextWeek
 /// https://raytracing.github.io/books/RayTracingTheNextWeek.html#quadrilaterals/interiortestingoftheintersectionusinguvcoordinates
