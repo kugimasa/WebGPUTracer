@@ -417,11 +417,11 @@ bool Renderer::OnRender(int frame) {
   /// PNG出力
   std::ostringstream sout;
   sout << std::setw(3) << std::setfill('0') << frame;
-//  std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
-//  if (!saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */)) {
-//    Error(PrintInfoType::Portracer, "Image output failed.");
-//    return false;
-//  }
+  std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
+  if (!saveTexture(output_file.c_str(), device_, texture_, pixel_buffer_, 0 /* output MIP level */)) {
+    Error(PrintInfoType::Portracer, "Image output failed.");
+    return false;
+  }
   // Clean up
   commands.release();
   encoder.release();
@@ -510,6 +510,8 @@ void Renderer::OnFinish() {
   // output_buffer_.release();
   // map_buffer_.destroy();
   // map_buffer_.release();
+  pixel_buffer_.destroy();
+  pixel_buffer_.release();
   /// Release WebGPU pipelines
   // render_pipeline_.release();
   compute_pipeline_.release();

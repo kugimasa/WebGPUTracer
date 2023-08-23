@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <string>
 
-bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, wgpu::Texture texture, int mipLevel) {
+bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, wgpu::Texture texture, Buffer &pixelBuffer, int mipLevel) {
   using namespace wgpu;
 
   if (texture.getDimension() != TextureDimension::_2D) {
@@ -28,7 +28,7 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
   pixelBufferDesc.mappedAtCreation = false;
   pixelBufferDesc.usage = BufferUsage::MapRead | BufferUsage::CopyDst;
   pixelBufferDesc.size = paddedBytesPerRow * height;
-  Buffer pixelBuffer = device.createBuffer(pixelBufferDesc);
+  pixelBuffer = device.createBuffer(pixelBufferDesc);
 
   // Start encoding the commands
   Queue queue = device.getQueue();
@@ -78,8 +78,6 @@ bool inline saveTexture(const std::filesystem::path &path, wgpu::Device device, 
   }
 
   // Clean-up
-  pixelBuffer.destroy();
-  wgpuBufferRelease(pixelBuffer);
   wgpuCommandEncoderRelease(encoder);
   wgpuCommandBufferRelease(command);
   wgpuQueueRelease(queue);

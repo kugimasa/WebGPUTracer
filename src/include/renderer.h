@@ -67,4 +67,5 @@ private:
     Buffer input_buffer_ = nullptr;
     Buffer output_buffer_ = nullptr;
     Buffer map_buffer_ = nullptr;
+    Buffer pixel_buffer_ = nullptr;
 };
