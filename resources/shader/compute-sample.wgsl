@@ -348,7 +348,6 @@ fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
       }
       col += max(path.col, kZero) / f32(kSPP);
     }
-    col = max(col, kZero);
-    textureStore(frameBuffer, invocation_id.xy, vec4(col, 1.0));
+    textureStore(frameBuffer, invocation_id.xy, vec4(saturate(col), 1.0));
   }
 }
