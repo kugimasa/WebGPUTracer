@@ -18,7 +18,6 @@ Scene::Scene(Device &device) {
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
-  spheres_.emplace_back(Point3(0, 0, -40), 0.5, Color3(20, 20, 20), true);
   spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.0, 0.2, 0.5));
   /// バッファのバインド
   InitBindGroupLayout(device);
@@ -30,12 +29,14 @@ Scene::Scene(Device &device) {
  * シーンの解放
  */
 void Scene::Release() {
-  storage_.bind_group_.release();
+  objects_.bind_group_.release();
   quad_buffer_.destroy();
   quad_buffer_.release();
   sphere_buffer_.destroy();
   sphere_buffer_.release();
-  storage_.bind_group_layout_.release();
+  sphere_light_buffer_.destroy();
+  sphere_light_buffer_.release();
+  objects_.bind_group_layout_.release();
 }
 
 
@@ -123,21 +124,25 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
  * BindGroupLayoutの初期化
  */
 void Scene::InitBindGroupLayout(Device &device) {
-  std::vector<BindGroupLayoutEntry> bindings(2, Default);
+  std::vector<BindGroupLayoutEntry> bindings(3, Default);
   /// Scene: Quads
   bindings[0].binding = 0;
   bindings[0].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[0].visibility = ShaderStage::Compute;
-  /// Scene: Sphere
+  /// Scene: Spheres
   bindings[1].binding = 1;
   bindings[1].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[1].visibility = ShaderStage::Compute;
+  /// Scene: Sphere Lights
+  bindings[2].binding = 2;
+  bindings[2].buffer.type = BufferBindingType::Uniform;
+  bindings[2].visibility = ShaderStage::Compute;
   /// BindGroupLayoutの作成
   BindGroupLayoutDescriptor bind_group_layout_desc{};
   bind_group_layout_desc.entryCount = (uint32_t) bindings.size();
   bind_group_layout_desc.entries = bindings.data();
-  bind_group_layout_desc.label = "Scene.storage_.bind_group_layout_";
-  storage_.bind_group_layout_ = device.createBindGroupLayout(bind_group_layout_desc);
+  bind_group_layout_desc.label = "Scene.objects_.bind_group_layout_";
+  objects_.bind_group_layout_ = device.createBindGroupLayout(bind_group_layout_desc);
 }
 
 /*
@@ -145,17 +150,17 @@ void Scene::InitBindGroupLayout(Device &device) {
  */
 void Scene::InitBuffers(Device &device) {
   quad_buffer_ = CreateQuadBuffer(device);
-  sphere_buffer_ = CreateSphereBuffer(device);
+  sphere_buffer_ = CreateSphereBuffer(device, spheres_.size(), BufferUsage::Storage, true);
+  sphere_light_buffer_ = CreateSphereBuffer(device, 2, BufferUsage::Uniform | BufferUsage::CopyDst, false);
 }
 
 /*
  * TriangleBufferの作成
  */
 Buffer Scene::CreateTriangleBuffer(Device &device) {
-  const uint32_t tri_stride = 20 * 4;
   BufferDescriptor tri_buffer_desc{};
-  tri_buffer_size_ = tri_stride * tris_.size();
-  tri_buffer_desc.size = tri_buffer_size_;
+  auto tri_buffer_size = tri_stride_ * tris_.size();
+  tri_buffer_desc.size = tri_buffer_size;
   tri_buffer_desc.usage = BufferUsage::Storage;
   tri_buffer_desc.mappedAtCreation = true;
   Buffer tri_buffer = device.createBuffer(tri_buffer_desc);
@@ -206,10 +211,9 @@ Buffer Scene::CreateTriangleBuffer(Device &device) {
  * QuadBufferの作成
  */
 Buffer Scene::CreateQuadBuffer(Device &device) {
-  const uint32_t quad_stride = 24 * 4;
   BufferDescriptor quad_buffer_desc{};
-  quad_buffer_size_ = quad_stride * quads_.size();
-  quad_buffer_desc.size = quad_buffer_size_;
+  auto quad_buffer_size = quad_stride_ * quads_.size();
+  quad_buffer_desc.size = quad_buffer_size;
   quad_buffer_desc.usage = BufferUsage::Storage;
   quad_buffer_desc.mappedAtCreation = true;
   Buffer quad_buffer = device.createBuffer(quad_buffer_desc);
@@ -260,34 +264,35 @@ Buffer Scene::CreateQuadBuffer(Device &device) {
 /*
  * SphereBufferの作成
  */
-Buffer Scene::CreateSphereBuffer(Device &device) {
-  const uint32_t sphere_stride = 8 * 4;
+Buffer Scene::CreateSphereBuffer(Device &device, uint32_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation) {
   BufferDescriptor sphere_buffer_desc{};
-  sphere_buffer_size_ = sphere_stride * spheres_.size();
-  sphere_buffer_desc.size = quad_buffer_size_;
-  sphere_buffer_desc.usage = BufferUsage::Storage;
-  sphere_buffer_desc.mappedAtCreation = true;
+  auto sphere_buffer_size = sphere_stride_ * num;
+  sphere_buffer_desc.size = sphere_buffer_size;
+  sphere_buffer_desc.usage = usage_flags;
+  sphere_buffer_desc.mappedAtCreation = mapped_at_creation;
   Buffer sphere_buffer = device.createBuffer(sphere_buffer_desc);
-  const uint32_t offset = 0;
-  const uint32_t size = 0;
-  auto *sphere_data = (float *) sphere_buffer.getConstMappedRange(offset, size);
-  uint32_t sphere_offset = 0;
-  for (int idx = 0; idx < (int) spheres_.size(); ++idx) {
-    Sphere sphere = spheres_[idx];
-    /// 中心
-    sphere_data[sphere_offset++] = sphere.center_[0];
-    sphere_data[sphere_offset++] = sphere.center_[1];
-    sphere_data[sphere_offset++] = sphere.center_[2];
-    /// 半径
-    sphere_data[sphere_offset++] = sphere.radius_;
-    /// カラー
-    sphere_data[sphere_offset++] = sphere.color_[0];
-    sphere_data[sphere_offset++] = sphere.color_[1];
-    sphere_data[sphere_offset++] = sphere.color_[2];
-    /// エミッシブ
-    sphere_data[sphere_offset++] = sphere.emissive_;
+  if (mapped_at_creation) {
+    const uint32_t offset = 0;
+    const uint32_t size = 0;
+    auto *sphere_data = (float *) sphere_buffer.getConstMappedRange(offset, size);
+    uint32_t sphere_offset = 0;
+    for (int idx = 0; idx < (int) spheres_.size(); ++idx) {
+      Sphere sphere = spheres_[idx];
+      /// 中心
+      sphere_data[sphere_offset++] = sphere.center_[0];
+      sphere_data[sphere_offset++] = sphere.center_[1];
+      sphere_data[sphere_offset++] = sphere.center_[2];
+      /// 半径
+      sphere_data[sphere_offset++] = sphere.radius_;
+      /// カラー
+      sphere_data[sphere_offset++] = sphere.color_[0];
+      sphere_data[sphere_offset++] = sphere.color_[1];
+      sphere_data[sphere_offset++] = sphere.color_[2];
+      /// エミッシブ
+      sphere_data[sphere_offset++] = sphere.emissive_;
+    }
+    sphere_buffer.unmap();
   }
-  sphere_buffer.unmap();
   return sphere_buffer;
 }
 
@@ -296,20 +301,37 @@ Buffer Scene::CreateSphereBuffer(Device &device) {
  */
 void Scene::InitBindGroup(Device &device) {
   /// BindGroup を作成
-  std::vector<BindGroupEntry> entries(2, Default);
+  std::vector<BindGroupEntry> entries(3, Default);
   /// QuadBuffer
   entries[0].binding = 0;
   entries[0].buffer = quad_buffer_;
   entries[0].offset = 0;
-  entries[0].size = quad_buffer_size_;
+  entries[0].size = quad_stride_ * quads_.size();
   /// SphereBuffer
   entries[1].binding = 1;
   entries[1].buffer = sphere_buffer_;
   entries[1].offset = 0;
-  entries[1].size = sphere_buffer_size_;
+  entries[1].size = sphere_stride_ * spheres_.size();
+  /// SphereLightBuffer
+  entries[2].binding = 2;
+  entries[2].buffer = sphere_light_buffer_;
+  entries[2].offset = 0;
+  entries[2].size = sizeof(SphereLights);
   BindGroupDescriptor bind_group_desc;
-  bind_group_desc.layout = storage_.bind_group_layout_;
+  bind_group_desc.layout = objects_.bind_group_layout_;
   bind_group_desc.entryCount = (uint32_t) entries.size();
   bind_group_desc.entries = (WGPUBindGroupEntry *) entries.data();
-  storage_.bind_group_ = device.createBindGroup(bind_group_desc);
+  objects_.bind_group_ = device.createBindGroup(bind_group_desc);
+}
+
+/*
+ * SphereLightの更新
+ */
+void Scene::UpdateSphereLights(Queue &queue, float t) {
+  Sphere l1(Point3(0, 0, -40), 0.5, Color3(20, 20, 20), true);
+  auto x = lerp(-2.0, 2.0, t);
+  auto z = lerp(0.0, 30.0, t);
+  Sphere l2(Point3(x, 1.0, -10 - z), 0.3, Color3(20, 150 + 30.0f * t, 20), true);
+  SphereLights lights(l1, l2);
+  queue.writeBuffer(sphere_light_buffer_, 0, &lights, sizeof(SphereLights));
 }

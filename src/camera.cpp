@@ -1,5 +1,4 @@
 #include "camera.h"
-#include "objects/cornell_box.h"
 
 /// \brief Constructor
 /// \param device

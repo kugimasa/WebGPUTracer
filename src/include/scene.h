@@ -11,14 +11,23 @@ public:
 
     explicit Scene(Device &device);
 
-    struct Storage {
+    struct Objects {
         BindGroupLayout bind_group_layout_;
         BindGroup bind_group_;
 
-        Storage() : bind_group_layout_(nullptr), bind_group_(nullptr) {};
+        Objects() : bind_group_layout_(nullptr), bind_group_(nullptr) {};
+    };
+
+    struct SphereLights {
+        Sphere l1_;
+        Sphere l2_;
+
+        SphereLights(Sphere l1, Sphere l2) : l1_(l1), l2_(l2) {};
     };
 
     void Release();
+
+    void UpdateSphereLights(Queue &queue, float t);
 
 private:
     void LoadObj(const char *file_path, Color3 color, Vec3 translation = ZERO_Vec3, bool emissive = false);
@@ -33,7 +42,7 @@ private:
 
     Buffer CreateQuadBuffer(Device &device);
 
-    Buffer CreateSphereBuffer(Device &device);
+    Buffer CreateSphereBuffer(Device &device, uint32_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation);
 
     void InitBindGroup(Device &device);
 
@@ -41,11 +50,12 @@ public:
     std::vector<Triangle> tris_;
     std::vector<Quad> quads_;
     std::vector<Sphere> spheres_;
-    uint32_t tri_buffer_size_ = 0;
-    uint32_t quad_buffer_size_ = 0;
-    uint32_t sphere_buffer_size_ = 0;
+    uint32_t tri_stride_ = 20 * 4;
+    uint32_t quad_stride_ = 24 * 4;
+    uint32_t sphere_stride_ = 8 * 4;
     Buffer tri_buffer_ = nullptr;
     Buffer quad_buffer_ = nullptr;
     Buffer sphere_buffer_ = nullptr;
-    Storage storage_ = {};
+    Buffer sphere_light_buffer_ = nullptr;
+    Objects objects_ = {};
 };

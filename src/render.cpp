@@ -75,14 +75,14 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxVertexAttributes = 3;
   requiredLimits.limits.maxVertexBufferArrayStride = 10 * sizeof(float);
   requiredLimits.limits.maxVertexBuffers = 3;
-  requiredLimits.limits.maxBufferSize = 100000 * sizeof(Vertex);
+  requiredLimits.limits.maxBufferSize = WIDTH * HEIGHT * sizeof(float);
   requiredLimits.limits.maxTextureDimension1D = 4096;
   requiredLimits.limits.maxTextureDimension2D = 4096;
   // Cannot be 4096 on local macOS (wgpu-native)
   requiredLimits.limits.maxTextureDimension3D = 2048;
   requiredLimits.limits.maxTextureArrayLayers = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 3;
-  requiredLimits.limits.maxStorageBufferBindingSize = 100000 * sizeof(Vertex);
+  requiredLimits.limits.maxStorageBufferBindingSize = WIDTH * HEIGHT * sizeof(float);;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
   requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
   requiredLimits.limits.maxComputeWorkgroupSizeY = 60;
@@ -284,7 +284,7 @@ void Renderer::InitComputePipeline() {
   /// Create a pipeline layout
   PipelineLayoutDescriptor layout_desc{};
   std::vector<WGPUBindGroupLayout> bind_group_layouts{camera_.GetUniforms().bind_group_layout_,
-                                                      scene_.storage_.bind_group_layout_,
+                                                      scene_.objects_.bind_group_layout_,
                                                       bind_group_layout_};
   layout_desc.bindGroupLayoutCount = 3;
   layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) bind_group_layouts.data();
@@ -368,16 +368,17 @@ bool Renderer::OnRender(uint32_t frame) {
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
   start = std::chrono::system_clock::now();
+  float t = (float) frame / (float) MAX_FRAME;
   /// Update camera
   /// NOTE: 原点が(0, 0, 0)だと描画がうまくいかないことがある(FarのQuadなど)
-  Point3 start_origin = Vec3(0, 0, 0.01);
-  Point3 start_target = Vec3(0, 0, 15);
-  float move_dist = lerp(0.0, 40.0, (float) frame / (float) MAX_FRAME);
+  float move_dist = lerp(0.0, 40.0, t);
   Point3 origin = Vec3(0, 0, 0.01f - move_dist);
   Point3 target = Vec3(0, 0, 15 + move_dist);
   float aspect = (float) WIDTH / (float) HEIGHT;
   float time = 0.0f;
   camera_.Update(queue_, origin, target, aspect, time);
+  /// UpdateScene
+  scene_.UpdateSphereLights(queue_, t);
 
   /// Input buffer
   std::vector<float> input(buffer_size_ / sizeof(float));
@@ -399,7 +400,7 @@ bool Renderer::OnRender(uint32_t frame) {
   // Use compute pass
   compute_pass.setPipeline(compute_pipeline_);
   compute_pass.setBindGroup(0, camera_.GetUniforms().bind_group_, 0, nullptr);
-  compute_pass.setBindGroup(1, scene_.storage_.bind_group_, 0, nullptr);
+  compute_pass.setBindGroup(1, scene_.objects_.bind_group_, 0, nullptr);
   compute_pass.setBindGroup(2, bind_group_, 0, nullptr);
 
   uint32_t invocation_count_x = texture_size_.width;
