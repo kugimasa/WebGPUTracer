@@ -29,9 +29,6 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
-    - name: Render
-      run: ${{github.workspace}}/build/Release/Portracer.exe
-
     - name: Upload Artifacts
       uses: actions/upload-artifact@v3.1.0
       with:
