@@ -363,15 +363,18 @@ bool Renderer::OnCompute() {
   return success;
 }
 
-bool Renderer::OnRender(int frame) {
+bool Renderer::OnRender(uint32_t frame) {
   // chrono変数
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
   start = std::chrono::system_clock::now();
   /// Update camera
   /// NOTE: 原点が(0, 0, 0)だと描画がうまくいかないことがある(FarのQuadなど)
-  Point3 origin = Vec3(0, 0, 0.01);
-  Point3 target = Vec3(0, 0, 15);
+  Point3 start_origin = Vec3(0, 0, 0.01);
+  Point3 start_target = Vec3(0, 0, 15);
+  float move_dist = lerp(0.0, 40.0, (float) frame / (float) MAX_FRAME);
+  Point3 origin = Vec3(0, 0, 0.01f - move_dist);
+  Point3 target = Vec3(0, 0, 15 + move_dist);
   float aspect = (float) WIDTH / (float) HEIGHT;
   float time = 0.0f;
   camera_.Update(queue_, origin, target, aspect, time);

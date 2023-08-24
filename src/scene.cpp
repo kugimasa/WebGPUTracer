@@ -11,26 +11,14 @@
  */
 Scene::Scene(Device &device) {
   /// Quadの追加
-  /// FIXME: 以下テスト用
   auto pos = Point3(0, 0, -9);
-  auto scale = Vec3(6, 6, 6);
+  auto scale = Vec3(8, 5, 100);
   auto cb = CornellBox(pos, scale);
-  auto u = 1.0f;
-  auto v = 2.0f;
-  auto center = Point3(2.0f, 0.0f, -9.0f);
-  pos = Point3(center.X(), center.Y() - v / 2.0f, center.Z() + u / 2.0f);
-  auto right = Vec3(0, 0, -u);
-  auto up = Vec3(0, v, 0);
-  quads_.emplace_back(pos, right, up, Color3(0.0, 0.2, 0.5));
-  pos = Vec3(-2, -2, -10);
-  right = Vec3(4, 0, 0);
-  up = Vec3(0, 4, 0);
-  quads_.emplace_back(pos, right, up, Color3(0.0, 0.2, .05));
   /// CornellBoxの追加
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
-  spheres_.emplace_back(Point3(0, 0, -9), 0.5, Color3(20, 20, 20), true);
+  spheres_.emplace_back(Point3(0, 0, -40), 0.5, Color3(20, 20, 20), true);
   spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.0, 0.2, 0.5));
   /// バッファのバインド
   InitBindGroupLayout(device);
