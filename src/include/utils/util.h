@@ -59,6 +59,17 @@ inline int RandInt(int min, int max) {
 }
 
 // 線形補間
-inline float lerp(float a, float b, float t) {
+inline float Lerp(float a, float b, float t) {
   return a + t * (b - a);
+}
+
+inline float EaseInQuart(float t) {
+  return t * t * t * t;
+}
+
+inline float EaseInOutExpo(float t) {
+  if (t == 0 || t == 1) {
+    return t;
+  }
+  return t < 0.5 ? pow(2.0f, 20.0f * t - 10.0f) / 2.0f : (2.0f - pow(2.0f, -20.0f * t + 10.0f)) / 2.0f;
 }

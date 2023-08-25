@@ -6,7 +6,7 @@ const kYup = vec3f(0.0, 1.0, 0.0);
 const kRayDepth = 5;
 const kRayMin = 1e-6;
 const kRayMax = 1e20;
-const kSPP = 150;
+const kSPP = 10;
 const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
 
@@ -70,6 +70,8 @@ struct Sphere {
 struct SphereLights {
   l1 : Sphere,
   l2 : Sphere,
+  l3 : Sphere,
+  l4 : Sphere,
 }
 
 fn fabs(x: f32) -> f32 {
@@ -161,13 +163,24 @@ fn sample_direction(hit: HitInfo) -> vec3f {
 }
 
 fn sample_from_light(hit: HitInfo) -> vec3f {
-  // MEMO: 今はSphereLightのみ
+  // FIXME: 境界が目立つ
   // ヒット位置とライト位置を比較
-  let l1_dist = distance(hit.pos, sphere_lights.l1.center);
+  var dist = distance(hit.pos, sphere_lights.l1.center);
+  var sphere = sphere_lights.l1;
   let l2_dist = distance(hit.pos, sphere_lights.l2.center);
-  var sphere = sphere_lights.l2;
-  if (l1_dist < l2_dist) {
-    sphere = sphere_lights.l1;
+  let l3_dist = distance(hit.pos, sphere_lights.l3.center);
+  let l4_dist = distance(hit.pos, sphere_lights.l4.center);
+  if (l2_dist < dist) {
+    dist = l2_dist;
+    sphere = sphere_lights.l2;
+  }
+  if (l3_dist < dist) {
+    dist = l3_dist;
+    sphere = sphere_lights.l3;
+  }
+  if (l4_dist < dist) {
+    dist = l4_dist;
+    sphere = sphere_lights.l4;
   }
   return sample_from_sphere(sphere, hit.pos);
 }
@@ -201,11 +214,21 @@ fn sample_from_cosine(hit: HitInfo) -> vec3f {
 }
 
 fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
+  /// FIXME: 暗くなってしまう
   let l1_dist = distance(hit.pos, sphere_lights.l1.center);
   let l2_dist = distance(hit.pos, sphere_lights.l2.center);
-  let l1_w = l2_dist / (l1_dist + l2_dist);
-  let l2_w = l1_dist / (l1_dist + l2_dist);
-  return 0.5 * cosine_pdf(hit, dir) + 0.5 * (l1_w * sphere_pdf(hit, sphere_lights.l1, dir) + l2_w * sphere_pdf(hit, sphere_lights.l2, dir));
+  let l3_dist = distance(hit.pos, sphere_lights.l3.center);
+  let l4_dist = distance(hit.pos, sphere_lights.l4.center);
+  let dist_sum = l1_dist + l2_dist + l3_dist + l4_dist;
+  let l1_w = (l2_dist + l3_dist + l4_dist) / dist_sum;
+  let l2_w = (l1_dist + l3_dist + l4_dist) / dist_sum;
+  let l3_w = (l1_dist + l2_dist + l4_dist) / dist_sum;
+  let l4_w = (l1_dist + l2_dist + l3_dist) / dist_sum;
+  let light_pdf = l1_w * sphere_pdf(hit, sphere_lights.l1, dir) +
+                  l2_w * sphere_pdf(hit, sphere_lights.l2, dir) +
+                  l3_w * sphere_pdf(hit, sphere_lights.l3, dir) +
+                  l4_w * sphere_pdf(hit, sphere_lights.l4, dir);
+  return 0.5 * cosine_pdf(hit, dir) + 0.5 * light_pdf;
 }
 
 fn sphere_pdf(hit: HitInfo, sphere: Sphere, dir: vec3f) -> f32 {
@@ -260,9 +283,8 @@ fn raytrace(path: Path, depth: i32) -> Path {
   if (emissive) {
     if (depth == 0) {
       var light_col = hit.col / length(hit.col);
-      let vdotn = dot(-r.dir.xyz, hit.norm.xyz);
-      // TODO: 正しい計算&Bloom...?
-      light_col = light_col + light_col * schlick_fresnel(vec3f(0.02), vdotn);
+      let dist = distance(camera.start.xyz, hit.pos.xyz);
+      light_col = hit.col / max(dist * dist, 1.0);
       return Path(r, light_col, true);
     }
     // 照明計算
@@ -299,6 +321,8 @@ fn sample_hit(r: Ray) -> HitInfo {
   // 光源との交差判定
   hit = intersect_sphere(r, sphere_lights.l1, hit);
   hit = intersect_sphere(r, sphere_lights.l2, hit);
+  hit = intersect_sphere(r, sphere_lights.l3, hit);
+  hit = intersect_sphere(r, sphere_lights.l4, hit);
   return hit;
 }
 

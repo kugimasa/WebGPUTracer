@@ -18,7 +18,7 @@ Scene::Scene(Device &device) {
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
-  spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.0, 0.2, 0.5));
+  spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.8, 0.8, 0.8));
   /// バッファのバインド
   InitBindGroupLayout(device);
   InitBuffers(device);
@@ -151,7 +151,7 @@ void Scene::InitBindGroupLayout(Device &device) {
 void Scene::InitBuffers(Device &device) {
   quad_buffer_ = CreateQuadBuffer(device);
   sphere_buffer_ = CreateSphereBuffer(device, spheres_.size(), BufferUsage::Storage, true);
-  sphere_light_buffer_ = CreateSphereBuffer(device, 2, BufferUsage::Uniform | BufferUsage::CopyDst, false);
+  sphere_light_buffer_ = CreateSphereBuffer(device, GetSphereLightsNum(), BufferUsage::Uniform | BufferUsage::CopyDst, false);
 }
 
 /*
@@ -328,10 +328,10 @@ void Scene::InitBindGroup(Device &device) {
  * SphereLightの更新
  */
 void Scene::UpdateSphereLights(Queue &queue, float t) {
-  Sphere l1(Point3(0, 0, -40), 0.5, Color3(20, 20, 20), true);
-  auto x = lerp(-2.0, 2.0, t);
-  auto z = lerp(0.0, 30.0, t);
-  Sphere l2(Point3(x, 1.0, -10 - z), 0.3, Color3(20, 150 + 30.0f * t, 20), true);
-  SphereLights lights(l1, l2);
+  Sphere l1(Point3(0, 0, -50), 0.5, Color3(2000, 2000, 2000), true);
+  Sphere l2(Point3(1.0, 2.0, -10), 0.3, Color3(20, 1500, 20), true);
+  Sphere l3(Point3(0.0, 2.0, -20), 0.3, Color3(1500, 20, 20), true);
+  Sphere l4(Point3(-1.0, 2.0, -30), 0.3, Color3(20, 20, 1500), true);
+  SphereLights lights(l1, l2, l3, l4);
   queue.writeBuffer(sphere_light_buffer_, 0, &lights, sizeof(SphereLights));
 }

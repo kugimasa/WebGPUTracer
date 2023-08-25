@@ -68,8 +68,8 @@ bool Renderer::InitDevice() {
   // Setting up required limits
   RequiredLimits requiredLimits = Default;
   requiredLimits.limits.maxBindGroups = 3;
-  requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
-  requiredLimits.limits.maxUniformBufferBindingSize = 16 * sizeof(float);
+  requiredLimits.limits.maxUniformBuffersPerShaderStage = 2;
+  requiredLimits.limits.maxUniformBufferBindingSize = sizeof(Scene::SphereLights);
   // origin(3), target(3), aspect(1), time(1), seed(1)
   // Without this, wgpu-native crashes
   requiredLimits.limits.maxVertexAttributes = 3;

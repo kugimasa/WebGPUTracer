@@ -60,11 +60,12 @@ void Camera::InitBindGroup(Device &device) {
 }
 
 void Camera::Update(Queue &queue, float t, float aspect) {
-  float move_dist = lerp(0.0, 40.0, t);
+  t = EaseInOutExpo(t);
+  float move_dist = Lerp(0.0, 40.0, t);
+  float fovy = t < 0.5 ? Lerp(40, 90, t / 0.5f) : Lerp(90, 40, (t - 0.5f) / 0.5f);
   Point3 origin = Vec3(0, 0, 0.01f - move_dist);
   Point3 target = Vec3(0, 0, 15 + move_dist);
   float time = 0.0f;
-  float fovy = 90.0f;
   CameraParam param(origin, target, aspect, fovy, time, RandSeed());
   queue.writeBuffer(uniform_buffer_, 0, &param, sizeof(CameraParam));
 }

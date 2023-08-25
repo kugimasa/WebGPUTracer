@@ -21,8 +21,10 @@ public:
     struct SphereLights {
         Sphere l1_;
         Sphere l2_;
+        Sphere l3_;
+        Sphere l4_;
 
-        SphereLights(Sphere l1, Sphere l2) : l1_(l1), l2_(l2) {};
+        SphereLights(Sphere l1, Sphere l2, Sphere l3, Sphere l4) : l1_(l1), l2_(l2), l3_(l3), l4_(l4) {};
     };
 
     void Release();
@@ -45,6 +47,10 @@ private:
     Buffer CreateSphereBuffer(Device &device, uint32_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation);
 
     void InitBindGroup(Device &device);
+
+    size_t inline GetSphereLightsNum() {
+      return sizeof(SphereLights) / sizeof(Sphere);
+    };
 
 public:
     std::vector<Triangle> tris_;
