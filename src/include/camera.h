@@ -21,7 +21,7 @@ public:
 
     void Release();
 
-    void Update(Queue &queue, Point3 origin, Point3 target, float aspect, float time);
+    void Update(Queue &queue, float t, float aspect);
 
 private:
     void InitBindGroupLayout(Device &device);
@@ -32,23 +32,22 @@ private:
 
 
 private:
-    struct Ray {
+    struct CameraParam {
         Point3 origin;
         float dummy;
         Point3 target;
         float dummy1;
         float aspect;
+        float fovy;
         float time;
         uint32_t seed;
-        float dummy2;
 
-        Ray(Vec3 origin, Vec3 target, float aspect, float time, uint32_t seed) :
-                origin(origin), target(target), aspect(aspect), time(time), seed(seed) {}
+        CameraParam(Vec3 origin, Vec3 target, float aspect, float fovy, float time, uint32_t seed) :
+                origin(origin), target(target), aspect(aspect), fovy(fovy), time(time), seed(seed) {}
     };
 
 
 private:
-    uint32_t buffer_size_ = 0;
     Buffer uniform_buffer_ = nullptr;
     Uniforms uniforms_ = {};
 };

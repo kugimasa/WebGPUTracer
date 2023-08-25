@@ -35,10 +35,9 @@ void Camera::InitBindGroupLayout(Device &device) {
 }
 
 void Camera::InitBuffers(Device &device) {
-  buffer_size_ = sizeof(Ray);
   BufferDescriptor buffer_desc{};
   buffer_desc.mappedAtCreation = false;
-  buffer_desc.size = buffer_size_;
+  buffer_desc.size = sizeof(CameraParam);
   buffer_desc.usage = BufferUsage::Uniform | BufferUsage::CopyDst;
   buffer_desc.label = "Camera.uniform_buffer_";
   uniform_buffer_ = device.createBuffer(buffer_desc);
@@ -52,7 +51,7 @@ void Camera::InitBindGroup(Device &device) {
   entries[0].binding = 0;
   entries[0].buffer = uniform_buffer_;
   entries[0].offset = 0;
-  entries[0].size = buffer_size_;
+  entries[0].size = sizeof(CameraParam);
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = uniforms_.bind_group_layout_;
   bind_group_desc.entryCount = (uint32_t) entries.size();
@@ -60,7 +59,12 @@ void Camera::InitBindGroup(Device &device) {
   uniforms_.bind_group_ = device.createBindGroup(bind_group_desc);
 }
 
-void Camera::Update(Queue &queue, Point3 origin, Point3 target, float aspect, float time) {
-  Ray ray{origin, target, aspect, time, RandSeed()};
-  queue.writeBuffer(uniform_buffer_, 0, &ray, sizeof(Ray));
+void Camera::Update(Queue &queue, float t, float aspect) {
+  float move_dist = lerp(0.0, 40.0, t);
+  Point3 origin = Vec3(0, 0, 0.01f - move_dist);
+  Point3 target = Vec3(0, 0, 15 + move_dist);
+  float time = 0.0f;
+  float fovy = 90.0f;
+  CameraParam param(origin, target, aspect, fovy, time, RandSeed());
+  queue.writeBuffer(uniform_buffer_, 0, &param, sizeof(CameraParam));
 }

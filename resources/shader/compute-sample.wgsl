@@ -1,7 +1,6 @@
 const kPI = 3.14159265359;
 const k_1_PI = 0.318309886184;
 const kNoHit = 0xffffffffu;
-const kFovy = 40.0f;
 const kXup = vec3f(1.0, 0.0, 0.0);
 const kYup = vec3f(0.0, 1.0, 0.0);
 const kRayDepth = 5;
@@ -12,9 +11,15 @@ const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
 
 struct Ray {
+  start : vec3f,
+  dir : vec3f,
+};
+
+struct CameraParam {
   start : vec4f,
-  dir : vec4f,
+  end : vec4f,
   aspect : f32,
+  fovy : f32,
   time : f32,
   seed : u32,
 };
@@ -226,23 +231,25 @@ fn schlick_fresnel(col: vec3f, cos: f32) -> vec3f {
   return col + pow5 * (1.0 - col);
 }
 
-@group(0) @binding(0) var<uniform> ray : Ray;
+@group(0) @binding(0) var<uniform> camera : CameraParam;
 @group(1) @binding(0) var<storage> quads : array<Quad>;
 @group(1) @binding(1) var<storage> spheres : array<Sphere>;
 @group(1) @binding(2) var<uniform> sphere_lights : SphereLights;
 
 fn setup_camera_ray(uv: vec2f) -> Ray {
-    let theta = radians(kFovy);
+    let theta = radians(camera.fovy);
     let half_h = tan(theta * 0.5);
-    let half_w = ray.aspect * half_h;
-    let w = normalize(ray.start.xyz - ray.dir.xyz);
+    let half_w = camera.aspect * half_h;
+    let origin = camera.start.xyz;
+    let end = camera.end.xyz;
+    let w = normalize(origin - end);
     let u = normalize(cross(kYup, w));
     let v = cross(w, u);
-    let lower_left_corner = ray.start.xyz - half_w * u - half_h * v - w;
+    let lower_left_corner = origin - half_w * u - half_h * v - w;
     let horizontal = 2.0 * half_w * u;
     let vertical = 2.0 * half_h * v;
-    let ray_dir = vec4(ray.start.xyz - (lower_left_corner + uv.x * horizontal + uv.y * vertical), 0.0);
-    return Ray(ray.start, ray_dir, ray.aspect, ray.time, ray.seed);
+    let ray_dir = origin - (lower_left_corner + uv.x * horizontal + uv.y * vertical);
+    return Ray(origin, ray_dir);
 }
 
 fn raytrace(path: Path, depth: i32) -> Path {
@@ -270,7 +277,7 @@ fn raytrace(path: Path, depth: i32) -> Path {
 //    let scatter_dir = sample_from_cosine(hit);
 //    let pdf_val = cosine_pdf(hit, scatter_dir);
     // パスを更新
-    let scattered_ray = Ray(vec4f(hit.pos, 1.0), vec4f(scatter_dir, 1.0), r.aspect, r.time, r.seed);
+    let scattered_ray = Ray(hit.pos, scatter_dir);
     let scattered_col = path.col * hit.col * scattering_pdf(hit, scatter_dir) / pdf_val;
     return Path(scattered_ray, scattered_col, false);
   }
@@ -360,7 +367,7 @@ fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
 fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
   let screen_size = vec2u(textureDimensions(frameBuffer));
   if (all(invocation_id.xy < screen_size)) {
-    seed = invocation_id.x + invocation_id.y * screen_size.x + u32(ray.seed) * screen_size.x * screen_size.y;;
+    seed = invocation_id.x + invocation_id.y * screen_size.x + u32(camera.seed) * screen_size.x * screen_size.y;;
     var col : vec3f;
     for (var spp = 0; spp < kSPP; spp++) {
       let u = (f32(invocation_id.x) + rand()) / f32(screen_size.x);

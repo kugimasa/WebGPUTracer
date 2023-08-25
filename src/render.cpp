@@ -371,12 +371,8 @@ bool Renderer::OnRender(uint32_t frame) {
   float t = (float) frame / (float) MAX_FRAME;
   /// Update camera
   /// NOTE: 原点が(0, 0, 0)だと描画がうまくいかないことがある(FarのQuadなど)
-  float move_dist = lerp(0.0, 40.0, t);
-  Point3 origin = Vec3(0, 0, 0.01f - move_dist);
-  Point3 target = Vec3(0, 0, 15 + move_dist);
   float aspect = (float) WIDTH / (float) HEIGHT;
-  float time = 0.0f;
-  camera_.Update(queue_, origin, target, aspect, time);
+  camera_.Update(queue_, t, aspect);
   /// UpdateScene
   scene_.UpdateSphereLights(queue_, t);
 
