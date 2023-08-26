@@ -11,14 +11,21 @@
  */
 Scene::Scene(Device &device) {
   /// Quadの追加
-  auto pos = Point3(0, 0, -9);
-  auto scale = Vec3(8, 5, 100);
+  auto pos = Point3(0, 0, 0);
+  auto scale = Vec3(8, 5, 500);
   auto cb = CornellBox(pos, scale);
   /// CornellBoxの追加
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
   spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.8, 0.8, 0.8));
+  // TODO: 光源に変更
+  //　最終位置
+  float end_pos = 128;
+  spheres_.emplace_back(Point3(0.0, 2.0, -(30 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
+  spheres_.emplace_back(Point3(0.0, 2.0, -(60 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
+  spheres_.emplace_back(Point3(0.0, 2.0, -(90 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
+  spheres_.emplace_back(Point3(0.0, 2.0, -(120 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
   /// バッファのバインド
   InitBindGroupLayout(device);
   InitBuffers(device);
@@ -328,10 +335,10 @@ void Scene::InitBindGroup(Device &device) {
  * SphereLightの更新
  */
 void Scene::UpdateSphereLights(Queue &queue, float t) {
-  Sphere l1(Point3(0, 0, -50), 0.5, Color3(2000, 2000, 2000), true);
-  Sphere l2(Point3(1.0, 2.0, -10), 0.3, Color3(20, 1500, 20), true);
-  Sphere l3(Point3(0.0, 2.0, -20), 0.3, Color3(1500, 20, 20), true);
-  Sphere l4(Point3(-1.0, 2.0, -30), 0.3, Color3(20, 20, 1500), true);
+  Sphere l1(Point3(0.0, 2.0, -120), 0.3, Color3(500, 500, 500), true);
+  Sphere l2(Point3(0.0, 2.0, -30), 0.3, Color3(2, 150, 2), true);
+  Sphere l3(Point3(0.0, 2.0, -60), 0.3, Color3(150, 2, 2), true);
+  Sphere l4(Point3(0.0, 2.0, -90), 0.3, Color3(2, 2, 150), true);
   SphereLights lights(l1, l2, l3, l4);
   queue.writeBuffer(sphere_light_buffer_, 0, &lights, sizeof(SphereLights));
 }

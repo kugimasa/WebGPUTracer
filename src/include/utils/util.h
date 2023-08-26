@@ -26,7 +26,7 @@ inline double Deg2Rad(double degrees) {
   return degrees * M_PI * 0.00555555555;
 }
 
-inline double Clamp(double x, double min, double max) {
+inline float Clamp(float x, float min, float max) {
   if (x < min) return min;
   if (x > max) return max;
   return x;
@@ -67,9 +67,17 @@ inline float EaseInQuart(float t) {
   return t * t * t * t;
 }
 
+inline float EaseOutCubic(float t) {
+  return 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+}
+
 inline float EaseInOutExpo(float t) {
   if (t == 0 || t == 1) {
     return t;
   }
   return t < 0.5 ? pow(2.0f, 20.0f * t - 10.0f) / 2.0f : (2.0f - pow(2.0f, -20.0f * t + 10.0f)) / 2.0f;
+}
+
+inline float Sigmoid(float t) {
+  return 3.0f * t * t - 2.0f * t * t * t;
 }
