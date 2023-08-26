@@ -1,1 +1,0 @@
-cmake -DCMAKE_BUILD_TYPE=Release -DWEBGPU_BACKEND=DAWN -DDEV_MODE=OFF -S . -B ./cmake-build-dawn_release
