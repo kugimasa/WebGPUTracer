@@ -31,7 +31,7 @@ include_directories("external/tinyobjloader")
 
 # Output directory
 target_compile_definitions(WebGPUTracer PRIVATE
-                           OUTPUT_DIR="${CMAKE_BINARY_DIR}/output"
+                           OUTPUT_DIR="${CMAKE_BINARY_DIR}"
                            )
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/output)
 

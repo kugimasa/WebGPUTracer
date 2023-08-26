@@ -6,7 +6,7 @@ const kYup = vec3f(0.0, 1.0, 0.0);
 const kRayDepth = 5;
 const kRayMin = 1e-6;
 const kRayMax = 1e20;
-const kSPP = 10;
+const kSPP = 150;
 const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
 
