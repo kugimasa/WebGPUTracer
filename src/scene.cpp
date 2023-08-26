@@ -18,14 +18,17 @@ Scene::Scene(Device &device) {
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
-  spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.8, 0.8, 0.8));
-  //　最終位置
-  float end_pos = 128;
-  spheres_.emplace_back(Point3(0.0, 2.0, -(30 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
-  spheres_.emplace_back(Point3(0.0, 2.0, -(60 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
-  spheres_.emplace_back(Point3(0.0, 2.0, -(90 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
-  spheres_.emplace_back(Point3(0.0, 2.0, -(120 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
-  /// バッファのバインド
+  spheres_.emplace_back(Point3(-1.0, 0, -10), 0.3, Color3(0.8, 0.8, 0.8));
+  spheres_.emplace_back(Point3(2.0, 0.5, -20), 0.3, Color3(0.8, 0.2, 0.4));
+  spheres_.emplace_back(Point3(1.0, -0.5, -30), 0.3, Color3(0.4, 0.8, 0.1));
+  spheres_.emplace_back(Point3(-1.5, 1.5, -40), 0.3, Color3(0.5, 0.2, 0.7));
+  spheres_.emplace_back(Point3(0.75, 1.8, -50), 0.3, Color3(0.1, 0.6, 0.3));
+  spheres_.emplace_back(Point3(1.65, -0.3, -60), 0.3, Color3(0.3, 0.2, 0.1));
+  spheres_.emplace_back(Point3(0.3, 0.5, -70), 0.3, Color3(0.4, 0.5, 0.4));
+  spheres_.emplace_back(Point3(-1.0, -0.5, -80), 0.3, Color3(0.7, 0.1, 0.7));
+  spheres_.emplace_back(Point3(1.0, -1.8, -90), 0.3, Color3(0.1, 0.3, 0.2));
+  spheres_.emplace_back(Point3(-1.8, 0.75, -100), 0.3, Color3(0.8, 0.6, 0.2));
+  spheres_.emplace_back(Point3(0.75, 0.5, -110), 0.3, Color3(0.2, 0.4, 0.5));
   InitBindGroupLayout(device);
   InitBuffers(device);
   InitBindGroup(device);
@@ -337,26 +340,39 @@ void Scene::UpdateSphereLights(Queue &queue, float t) {
   float cam_pos = t < 0.2f ? 8.0f * EaseInQuart(t / 0.2f) : 8.0f * EaseInQuart((t - 0.2f) / 0.8f + 1.0f);
   float dist_from_cam = 5.0f;
   float move_dist = cam_pos + dist_from_cam;
-  bool is_on = t < 0.95f;
-  bool l1_on = is_on && move_dist > 15 - dist_from_cam;
-  bool l2_on = is_on && move_dist > 30 - dist_from_cam;
-  bool l3_on = is_on && move_dist > 45 - dist_from_cam;
-  bool l4_on = is_on && move_dist > 60 - dist_from_cam;
-  bool l5_on = is_on && move_dist > 75 - dist_from_cam;
-  bool l6_on = is_on && move_dist > 90 - dist_from_cam;
-  bool l7_on = is_on && move_dist > 105 - dist_from_cam;
-  bool l8_on = is_on && move_dist > 120 - dist_from_cam;
-  Color3 light_col = Color3(1000, 1000, 1000);
+  bool l1_on = move_dist > 15 - dist_from_cam;
+  bool l2_on = move_dist > 30 - dist_from_cam;
+  bool l3_on = move_dist > 45 - dist_from_cam;
+  bool l4_on = move_dist > 60 - dist_from_cam;
+  bool l5_on = move_dist > 75 - dist_from_cam;
+  bool l6_on = move_dist > 90 - dist_from_cam;
+  bool l7_on = move_dist > 105 - dist_from_cam;
+  float light_power = t < 0.15f ? Lerp(0.0, 1000.0, t / 0.15f) : t < 0.95f ? 1000.0f : Lerp(1000.0f, 0.0f, EaseOutCubic((t - 0.95f) / 0.05f));
   Color3 light_off_col = Color3(0.2, 0.2, 0.2);
-  Color3 move_light_col = Color3(2000, 2000, 2000);
-  Color3 col1 = l1_on ? light_col + Color3(250, 0, 0) : light_off_col;
-  Color3 col2 = l2_on ? light_col + Color3(0, 250, 0) : light_off_col;
-  Color3 col3 = l3_on ? light_col + Color3(0, 0, 250) : light_off_col;
-  Color3 col4 = l4_on ? light_col + Color3(250, 250, 0) : light_off_col;
-  Color3 col5 = l5_on ? light_col + Color3(0, 250, 250) : light_off_col;
-  Color3 col6 = l6_on ? light_col + Color3(250, 0, 250) : light_off_col;
-  Color3 col7 = l7_on ? light_col + Color3(500, 0, 250) : light_off_col;
-  Color3 col8 = l8_on ? light_col + Color3(250, 0, 500) : light_off_col;
+  Color3 move_light_col = light_power * Color3(1.0f, 1.0f, 1.0f);
+  Color3 col1 = l1_on ? light_power * Color3(255.0f / 255.0f, 0.0f, 0.0f) : light_off_col;
+  Color3 col2 = l2_on ? light_power * Color3(255.0f / 255.0f, 127.0f / 255.0f, 0.0f) : light_off_col;
+  Color3 col3 = l3_on ? light_power * Color3(255.0f / 255.0f, 255.0f / 255.0f, 0.0f) : light_off_col;
+  Color3 col4 = l4_on ? light_power * Color3(0.0f, 255.0f / 255.0f, 0.0f) : light_off_col;
+  Color3 col5 = l5_on ? light_power * Color3(0.0f, 0.0f, 255.0f / 255.0f) : light_off_col;
+  Color3 col6 = l6_on ? light_power * Color3(75.0f / 255.0f, 0.0f, 130.0f / 255.0f) : light_off_col;
+  Color3 col7 = l7_on ? light_power * Color3(148.0f / 255.0f, 0.0f, 211.0f / 255.0f) : light_off_col;
+  // 移動ライトの色を変化
+  if (l7_on) {
+    move_light_col = col7;
+  } else if (l6_on) {
+    move_light_col = col6;
+  } else if (l5_on) {
+    move_light_col = col5;
+  } else if (l4_on) {
+    move_light_col = col4;
+  } else if (l3_on) {
+    move_light_col = col3;
+  } else if (l2_on) {
+    move_light_col = col2;
+  } else if (l1_on) {
+    move_light_col = col1;
+  }
   Sphere l1(Point3(0.0, 2.0, -15), 0.3, col1, l1_on);
   Sphere l2(Point3(0.0, 2.0, -30), 0.3, col2, l2_on);
   Sphere l3(Point3(0.0, 2.0, -45), 0.3, col3, l3_on);
@@ -364,14 +380,13 @@ void Scene::UpdateSphereLights(Queue &queue, float t) {
   Sphere l5(Point3(0.0, 2.0, -75), 0.3, col5, l5_on);
   Sphere l6(Point3(0.0, 2.0, -90), 0.3, col6, l6_on);
   Sphere l7(Point3(0.0, 2.0, -105), 0.3, col7, l7_on);
-  Sphere l8(Point3(0.0, 2.0, -120), 0.3, col8, l8_on);
-//  float end_pos = 8.0f * EaseInQuart((0.95f - 0.2f) / 0.8f + 1.0f);
-//  float theta = (is_on ? cam_pos / 12.0f : Lerp(end_pos / 12.0f, 360.0f, (t - 0.95f) / 0.05f)) * (float) (M_PI * 2.0f);
+  float end_cam_pos = 8.0f * EaseInQuart((0.95f - 0.2f) / 0.8f + 1.0f);
+  float end_theta = Lerp(end_cam_pos / 12.0f * (float) (M_PI * 2.0f), 10.0f * (float) (M_PI * 2.0f), EaseOutCubic((t - 0.95f) / 0.05f));
   float theta = cam_pos / 12.0f * (float) (M_PI * 2.0f);
   float x = cos(theta);
   float y = sin(theta);
   Point3 origin = Vec3(x, y, 0.01f - move_dist);
   Sphere move_l(origin, 0.1, move_light_col, true);
-  SphereLights lights(l1, l2, l3, l4, l5, l6, l7, l8, move_l);
+  SphereLights lights(l1, l2, l3, l4, l5, l6, l7, move_l);
   queue.writeBuffer(sphere_light_buffer_, 0, &lights, sizeof(SphereLights));
 }

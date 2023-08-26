@@ -342,14 +342,14 @@ void Renderer::InitBindGroup() {
 }
 
 /// \brief Compute pass
-bool Renderer::OnCompute() {
+bool Renderer::OnCompute(uint32_t start_frame, uint32_t end_frame) {
   Print(PrintInfoType::Portracer, "Running compute pass ...");
   auto success = false;
   // chrono変数
   std::chrono::system_clock::time_point start, end;
   // 時間計測開始
   start = std::chrono::system_clock::now();
-  for (uint32_t i = 0; i < MAX_FRAME; ++i) {
+  for (uint32_t i = start_frame - 1; i < end_frame; ++i) {
     success = OnRender(i);
   }
   queue_.release();

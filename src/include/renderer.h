@@ -10,7 +10,7 @@ class Renderer {
 public:
     bool OnInit(bool hasWindow);
 
-    bool OnCompute();
+    bool OnCompute(uint32_t start_frame, uint32_t end_frame);
 
     bool OnRender(uint32_t frame);
 
@@ -42,7 +42,7 @@ private:
 private:
     static const uint32_t WIDTH = 640;
     static const uint32_t HEIGHT = 480;
-    static const uint32_t MAX_FRAME = 300;
+    static const uint32_t MAX_FRAME = 600;
     Camera camera_{};
     Scene scene_{};
     bool hasWindow_ = false;

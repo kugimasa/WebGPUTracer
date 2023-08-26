@@ -1,6 +1,6 @@
 #include "renderer.h"
 
-int main() {
+int main(int argc, char *argv[]) {
   Print(PrintInfoType::Portracer, "Starting Portracer (_)=---=(_)");
   Renderer renderer;
   bool hasWindow = false;
@@ -13,8 +13,19 @@ int main() {
     }
   }
 
+  uint32_t start_frame = 1;
+  uint32_t end_frame = 600;
+  // コマンドライン入力形式
+  // ./Portracer.exe --frame [start] [end]
+  if (argc == 4) {
+    if (strcmp(argv[1], "--frame") == 0) {
+      start_frame = (uint32_t) atoi(argv[2]);
+      end_frame = (uint32_t) atoi(argv[3]);
+    }
+  }
+
   // ComputePipeline
-  if (!renderer.OnCompute()) {
+  if (!renderer.OnCompute(start_frame, end_frame)) {
     Error(PrintInfoType::Portracer, "(_)=--.. Something went wrong");
     return 1;
   }

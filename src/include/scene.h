@@ -27,10 +27,9 @@ public:
         Sphere l6_;
         Sphere l7_;
         Sphere l8_;
-        Sphere l9_;
 
-        SphereLights(Sphere l1, Sphere l2, Sphere l3, Sphere l4, Sphere l5, Sphere l6, Sphere l7, Sphere l8, Sphere l9)
-                : l1_(l1), l2_(l2), l3_(l3), l4_(l4), l5_(l5), l6_(l6), l7_(l7), l8_(l8), l9_(l9) {};
+        SphereLights(Sphere l1, Sphere l2, Sphere l3, Sphere l4, Sphere l5, Sphere l6, Sphere l7, Sphere l8)
+                : l1_(l1), l2_(l2), l3_(l3), l4_(l4), l5_(l5), l6_(l6), l7_(l7), l8_(l8) {};
     };
 
     void Release();
