@@ -417,7 +417,7 @@ bool Renderer::OnRender(uint32_t frame) {
   /// PNG出力
   std::ostringstream sout;
   sout << std::setw(3) << std::setfill('0') << frame;
-  std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
+  std::string output_file = sout.str() + ".png";
   if (!saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */)) {
     Error(PrintInfoType::WebGPUTracer, "Image output failed.");
     return false;

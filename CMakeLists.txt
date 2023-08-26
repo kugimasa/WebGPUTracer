@@ -29,12 +29,6 @@ include_directories(src/include)
 include_directories("external/stb")
 include_directories("external/tinyobjloader")
 
-# Output directory
-target_compile_definitions(WebGPUTracer PRIVATE
-                           OUTPUT_DIR="${CMAKE_BINARY_DIR}"
-                           )
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/output)
-
 if (DEV_MODE)
     target_compile_definitions(WebGPUTracer PRIVATE
                                RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
