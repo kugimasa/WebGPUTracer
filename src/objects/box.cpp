@@ -1,6 +1,6 @@
 #include "objects/box.h"
 
-Box::Box(Vec3 center, Vec3 scale, double rotation, Color3 color, bool emissive, bool face_out) {
+Box::Box(Vec3 center, Vec3 scale, float rotation, Color3 color, bool emissive, bool face_out) {
   center_ = center;
   scale_ = scale;
   rotation_ = rotation;

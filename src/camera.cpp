@@ -63,12 +63,12 @@ void Camera::Update(Queue &queue, float t, float aspect) {
   // カメラ: [前半]InQuart, [後半]等速
   float end_dist = 8.0f * EaseInQuart((0.95f - 0.2f) / 0.8f + 1.0f);
   float move_dist = t < 0.2f ? 8.0f * EaseInQuart(t / 0.2f) : t < 0.95f ? 8.0f * EaseInQuart((t - 0.2f) / 0.8f + 1.0f) : end_dist;
-  Point3 origin = Vec3(0, 0, 0.01f - move_dist);
-  Point3 target = Vec3(0, 0, 15 + move_dist);
+  Point3 origin = Vec3(0.0f, 0.0f, 0.01f - move_dist);
+  Point3 target = Vec3(0.0f, 0.0f, 15.0f + move_dist);
   // fovy変化: 増加は 0.0 ~ 0.15, 減少は 0.95 ~ 1.0
   float fovy_add_t = t / 0.15f;
   float fovy_dec_t = (t - 0.95f) / 0.05f;
-  float fovy = t < 0.15f ? Lerp(40, 65, fovy_add_t) : t < 0.95f ? 65 : Lerp(65, 40, EaseOutCubic(fovy_dec_t));
+  float fovy = t < 0.15f ? Lerp(40.0f, 65.0f, fovy_add_t) : t < 0.95f ? 65.0f : Lerp(65.0f, 40.0f, EaseOutCubic(fovy_dec_t));
   float time = 0.0f;
   CameraParam param(origin, target, aspect, fovy, time, RandSeed());
   queue.writeBuffer(uniform_buffer_, 0, &param, sizeof(CameraParam));

@@ -34,7 +34,7 @@ public:
 
     void Release();
 
-    void UpdateSphereLights(Queue &queue, float t);
+    void UpdateSphereLights(Queue &queue, float t) const;
 
 private:
     void LoadObj(const char *file_path, Color3 color, Vec3 translation = ZERO_Vec3, bool emissive = false);

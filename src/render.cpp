@@ -356,7 +356,7 @@ bool Renderer::OnCompute(uint32_t start_frame, uint32_t end_frame) {
   // 時間計測終了
   end = std::chrono::system_clock::now();
   // 経過時間の算出
-  double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  double elapsed = (double) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::ostringstream sout;
   sout << elapsed * 0.001 << "(sec)s";
   Print(PrintInfoType::WebGPUTracer, "Finished: ", sout.str());
@@ -429,7 +429,7 @@ bool Renderer::OnRender(uint32_t frame) {
   // 時間計測終了
   end = std::chrono::system_clock::now();
   // 経過時間の算出
-  double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  double elapsed = (double) std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::cout << "[" << sout.str() << "]: " << elapsed * 0.001 << "(sec)s" << std::endl;
   return true;
 }

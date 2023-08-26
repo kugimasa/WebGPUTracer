@@ -11,24 +11,24 @@
  */
 Scene::Scene(Device &device) {
   /// Quadの追加
-  auto pos = Point3(0, 0, 0);
-  auto scale = Vec3(8, 5, 500);
+  auto pos = Point3(0.0f, 0.0f, 0.0f);
+  auto scale = Vec3(8.0f, 5.0f, 500.0f);
   auto cb = CornellBox(pos, scale);
   /// CornellBoxの追加
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
-  spheres_.emplace_back(Point3(-1.0, 0, -10), 0.3, Color3(0.8, 0.8, 0.8));
-  spheres_.emplace_back(Point3(2.0, 0.5, -20), 0.3, Color3(0.8, 0.2, 0.4));
-  spheres_.emplace_back(Point3(1.0, -0.5, -30), 0.3, Color3(0.4, 0.8, 0.1));
-  spheres_.emplace_back(Point3(-1.5, 1.5, -40), 0.3, Color3(0.5, 0.2, 0.7));
-  spheres_.emplace_back(Point3(0.75, 1.8, -50), 0.3, Color3(0.1, 0.6, 0.3));
-  spheres_.emplace_back(Point3(1.65, -0.3, -60), 0.3, Color3(0.3, 0.2, 0.1));
-  spheres_.emplace_back(Point3(0.3, 0.5, -70), 0.3, Color3(0.4, 0.5, 0.4));
-  spheres_.emplace_back(Point3(-1.0, -0.5, -80), 0.3, Color3(0.7, 0.1, 0.7));
-  spheres_.emplace_back(Point3(1.0, -1.8, -90), 0.3, Color3(0.1, 0.3, 0.2));
-  spheres_.emplace_back(Point3(-1.8, 0.75, -100), 0.3, Color3(0.8, 0.6, 0.2));
-  spheres_.emplace_back(Point3(0.75, 0.5, -110), 0.3, Color3(0.2, 0.4, 0.5));
+  spheres_.emplace_back(Point3(-1.0f, 0.0f, -10.0f), 0.3f, Color3(0.8f, 0.8f, 0.8f));
+  spheres_.emplace_back(Point3(2.0f, 0.5f, -20.0f), 0.3f, Color3(0.8f, 0.2f, 0.4f));
+  spheres_.emplace_back(Point3(1.0f, -0.5f, -30.0f), 0.3f, Color3(0.4f, 0.8f, 0.1f));
+  spheres_.emplace_back(Point3(-1.5f, 1.5f, -40.0f), 0.3f, Color3(0.5f, 0.2f, 0.7f));
+  spheres_.emplace_back(Point3(0.75f, 1.8f, -50.0f), 0.3f, Color3(0.1f, 0.6f, 0.3f));
+  spheres_.emplace_back(Point3(1.65f, -0.3f, -60.0f), 0.3f, Color3(0.3f, 0.2, 0.1f));
+  spheres_.emplace_back(Point3(0.3f, 0.5f, -70.0f), 0.3f, Color3(0.4f, 0.5f, 0.4f));
+  spheres_.emplace_back(Point3(-1.0f, -0.5f, -80.0f), 0.3f, Color3(0.7f, 0.1f, 0.7f));
+  spheres_.emplace_back(Point3(1.0f, -1.8f, -90.0f), 0.3f, Color3(0.1f, 0.3f, 0.2f));
+  spheres_.emplace_back(Point3(-1.8f, 0.75f, -100.0f), 0.3f, Color3(0.8f, 0.6f, 0.2f));
+  spheres_.emplace_back(Point3(0.75f, 0.5f, -110.0f), 0.3f, Color3(0.2f, 0.4f, 0.5f));
   InitBindGroupLayout(device);
   InitBuffers(device);
   InitBindGroup(device);
@@ -285,7 +285,7 @@ Buffer Scene::CreateSphereBuffer(Device &device, uint32_t num, WGPUBufferUsageFl
     const uint32_t size = 0;
     auto *sphere_data = (float *) sphere_buffer.getConstMappedRange(offset, size);
     uint32_t sphere_offset = 0;
-    for (int idx = 0; idx < (int) spheres_.size(); ++idx) {
+    for (uint32_t idx = 0; idx < spheres_.size(); ++idx) {
       Sphere sphere = spheres_[idx];
       /// 中心
       sphere_data[sphere_offset++] = sphere.center_[0];
@@ -336,19 +336,19 @@ void Scene::InitBindGroup(Device &device) {
 /*
  * SphereLightの更新
  */
-void Scene::UpdateSphereLights(Queue &queue, float t) {
+void Scene::UpdateSphereLights(Queue &queue, float t) const {
   float cam_pos = t < 0.2f ? 8.0f * EaseInQuart(t / 0.2f) : 8.0f * EaseInQuart((t - 0.2f) / 0.8f + 1.0f);
   float dist_from_cam = 5.0f;
   float move_dist = cam_pos + dist_from_cam;
-  bool l1_on = move_dist > 15 - dist_from_cam;
-  bool l2_on = move_dist > 30 - dist_from_cam;
-  bool l3_on = move_dist > 45 - dist_from_cam;
-  bool l4_on = move_dist > 60 - dist_from_cam;
-  bool l5_on = move_dist > 75 - dist_from_cam;
-  bool l6_on = move_dist > 90 - dist_from_cam;
-  bool l7_on = move_dist > 105 - dist_from_cam;
-  float light_power = t < 0.15f ? Lerp(0.0, 1000.0, t / 0.15f) : t < 0.95f ? 1000.0f : Lerp(1000.0f, 0.0f, EaseOutCubic((t - 0.95f) / 0.05f));
-  Color3 light_off_col = Color3(0.2, 0.2, 0.2);
+  bool l1_on = move_dist > 15.0f - dist_from_cam;
+  bool l2_on = move_dist > 30.0f - dist_from_cam;
+  bool l3_on = move_dist > 45.0f - dist_from_cam;
+  bool l4_on = move_dist > 60.0f - dist_from_cam;
+  bool l5_on = move_dist > 75.0f - dist_from_cam;
+  bool l6_on = move_dist > 90.0f - dist_from_cam;
+  bool l7_on = move_dist > 105.0f - dist_from_cam;
+  float light_power = t < 0.15f ? Lerp(0.0f, 1000.0f, t / 0.15f) : t < 0.95f ? 1000.0f : Lerp(1000.0f, 0.0f, EaseOutCubic((t - 0.95f) / 0.05f));
+  Color3 light_off_col = Color3(0.2f, 0.2f, 0.2f);
   Color3 move_light_col = light_power * Color3(1.0f, 1.0f, 1.0f);
   Color3 col1 = l1_on ? light_power * Color3(255.0f / 255.0f, 0.0f, 0.0f) : light_off_col;
   Color3 col2 = l2_on ? light_power * Color3(255.0f / 255.0f, 127.0f / 255.0f, 0.0f) : light_off_col;
@@ -373,20 +373,18 @@ void Scene::UpdateSphereLights(Queue &queue, float t) {
   } else if (l1_on) {
     move_light_col = col1;
   }
-  Sphere l1(Point3(0.0, 2.0, -15), 0.3, col1, l1_on);
-  Sphere l2(Point3(0.0, 2.0, -30), 0.3, col2, l2_on);
-  Sphere l3(Point3(0.0, 2.0, -45), 0.3, col3, l3_on);
-  Sphere l4(Point3(0.0, 2.0, -60), 0.3, col4, l4_on);
-  Sphere l5(Point3(0.0, 2.0, -75), 0.3, col5, l5_on);
-  Sphere l6(Point3(0.0, 2.0, -90), 0.3, col6, l6_on);
-  Sphere l7(Point3(0.0, 2.0, -105), 0.3, col7, l7_on);
-  float end_cam_pos = 8.0f * EaseInQuart((0.95f - 0.2f) / 0.8f + 1.0f);
-  float end_theta = Lerp(end_cam_pos / 12.0f * (float) (M_PI * 2.0f), 10.0f * (float) (M_PI * 2.0f), EaseOutCubic((t - 0.95f) / 0.05f));
+  Sphere l1(Point3(0.0f, 2.0f, -15.0f), 0.3f, col1, l1_on);
+  Sphere l2(Point3(0.0f, 2.0f, -30.0f), 0.3f, col2, l2_on);
+  Sphere l3(Point3(0.0f, 2.0f, -45.0f), 0.3f, col3, l3_on);
+  Sphere l4(Point3(0.0f, 2.0f, -60.0f), 0.3f, col4, l4_on);
+  Sphere l5(Point3(0.0f, 2.0f, -75.0f), 0.3f, col5, l5_on);
+  Sphere l6(Point3(0.0f, 2.0f, -90.0f), 0.3f, col6, l6_on);
+  Sphere l7(Point3(0.0f, 2.0f, -105.0f), 0.3f, col7, l7_on);
   float theta = cam_pos / 12.0f * (float) (M_PI * 2.0f);
   float x = cos(theta);
   float y = sin(theta);
   Point3 origin = Vec3(x, y, 0.01f - move_dist);
-  Sphere move_l(origin, 0.1, move_light_col, true);
+  Sphere move_l(origin, 0.1f, move_light_col, true);
   SphereLights lights(l1, l2, l3, l4, l5, l6, l7, move_l);
   queue.writeBuffer(sphere_light_buffer_, 0, &lights, sizeof(SphereLights));
 }

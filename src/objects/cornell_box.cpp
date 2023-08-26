@@ -9,12 +9,7 @@ CornellBox::CornellBox(Point3 center, Vec3 scale) {
   auto s_x = scale_.X();
   auto s_y = scale_.Y();
   auto s_z = scale_.Z();
-  auto left_red = Color3(1.0f, 0.2f, 0.2f);
-  auto far_green = Color3(0.2f, 1.0f, 0.2f);
-  auto right_blue = Color3(0.2f, 0.2f, 1.0f);
-  auto top_orange = Color3(1.0f, 0.5f, 0.0f);
-  auto bottom_teal = Color3(0.2f, 0.8f, 0.8f);
-  auto white = Color3(0.73, 0.73, 0.73);
+  auto white = Color3(0.73f, 0.73f, 0.73f);
   /// Top
   auto pos = Vec3(p_x - s_x / 2.0f, p_y + s_y / 2.0f, p_z - s_z / 2.0f);
   auto right = Vec3(s_x, 0, 0);
