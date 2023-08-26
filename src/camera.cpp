@@ -61,7 +61,8 @@ void Camera::InitBindGroup(Device &device) {
 
 void Camera::Update(Queue &queue, float t, float aspect) {
   // カメラ: [前半]InQuart, [後半]等速
-  float move_dist = t < 0.2f ? 8.0f * EaseInQuart(t / 0.2f) : 8.0f * EaseInQuart((t - 0.2f) / 0.8f + 1.0f);
+  float end_dist = 8.0f * EaseInQuart((0.95f - 0.2f) / 0.8f + 1.0f);
+  float move_dist = t < 0.2f ? 8.0f * EaseInQuart(t / 0.2f) : t < 0.95f ? 8.0f * EaseInQuart((t - 0.2f) / 0.8f + 1.0f) : end_dist;
   Point3 origin = Vec3(0, 0, 0.01f - move_dist);
   Point3 target = Vec3(0, 0, 15 + move_dist);
   // fovy変化: 増加は 0.0 ~ 0.15, 減少は 0.95 ~ 1.0

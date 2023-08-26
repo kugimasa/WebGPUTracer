@@ -72,6 +72,11 @@ struct SphereLights {
   l2 : Sphere,
   l3 : Sphere,
   l4 : Sphere,
+  l5 : Sphere,
+  l6 : Sphere,
+  l7 : Sphere,
+  l8 : Sphere,
+  l9 : Sphere,
 }
 
 fn fabs(x: f32) -> f32 {
@@ -165,25 +170,59 @@ fn sample_direction(hit: HitInfo) -> vec3f {
 fn sample_from_light(hit: HitInfo) -> vec3f {
   // ヒット位置とライト位置を比較
   // FIXME: ライトの個数分追加が必要
-  var l1_dist = distance(hit.pos, sphere_lights.l1.center);
+  let l1_dist = distance(hit.pos, sphere_lights.l1.center);
   let l2_dist = distance(hit.pos, sphere_lights.l2.center);
   let l3_dist = distance(hit.pos, sphere_lights.l3.center);
   let l4_dist = distance(hit.pos, sphere_lights.l4.center);
-  let l1_w = 1.0 / (l1_dist * l1_dist);
-  let l2_w = 1.0 / (l2_dist * l2_dist);
-  let l3_w = 1.0 / (l3_dist * l3_dist);
-  let l4_w = 1.0 / (l4_dist * l4_dist);
-  let sum = l1_w + l2_w + l3_w + l4_w;
+  var l5_dist = distance(hit.pos, sphere_lights.l5.center);
+  let l6_dist = distance(hit.pos, sphere_lights.l6.center);
+  let l7_dist = distance(hit.pos, sphere_lights.l7.center);
+  let l8_dist = distance(hit.pos, sphere_lights.l8.center);
+  let l9_dist = distance(hit.pos, sphere_lights.l9.center);
+  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), sphere_lights.l1.emissive > 0.0f);
+  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), sphere_lights.l2.emissive > 0.0f);
+  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), sphere_lights.l3.emissive > 0.0f);
+  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), sphere_lights.l4.emissive > 0.0f);
+  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), sphere_lights.l5.emissive > 0.0f);
+  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), sphere_lights.l6.emissive > 0.0f);
+  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), sphere_lights.l7.emissive > 0.0f);
+  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), sphere_lights.l8.emissive > 0.0f);
+  let l9_w = select(0.0, 1.0 / (l9_dist * l9_dist), sphere_lights.l9.emissive > 0.0f);
+  let sum = l1_w + l2_w + l3_w + l4_w + l5_w + l6_w + l7_w + l8_w + l9_w;
+  let l1_t = l1_w / sum;
+  let l2_t = l1_t + l2_w / sum;
+  let l3_t = l2_t + l3_w / sum;
+  let l4_t = l3_t + l4_w / sum;
+  let l5_t = l4_t + l5_w / sum;
+  let l6_t = l5_t + l6_w / sum;
+  let l7_t = l6_t + l7_w / sum;
+  let l8_t = l7_t + l8_w / sum;
+  let l9_t = l8_t + l9_w / sum;
   let rand = rand();
   var sphere = sphere_lights.l1;
-  if (l1_w / sum < rand && rand <= (l1_w + l2_w) / sum) {
+  if (l1_t < rand && rand <= l2_t) {
       sphere = sphere_lights.l2;
   }
-  if ((l1_w + l2_w) / sum < rand && rand <= (l1_w + l2_w + l3_w) / sum) {
+  if (l2_t < rand && rand <= l3_t) {
       sphere = sphere_lights.l3;
   }
-  if ((l1_w + l2_w + l3_w) / sum < rand && rand <= 1.0) {
+  if (l3_t < rand && rand <= l4_t) {
       sphere = sphere_lights.l4;
+  }
+  if (l4_t < rand && rand <= l5_t) {
+      sphere = sphere_lights.l5;
+  }
+  if (l5_t < rand && rand <= l6_t) {
+      sphere = sphere_lights.l6;
+  }
+  if (l6_t < rand && rand <= l7_t) {
+      sphere = sphere_lights.l7;
+  }
+  if (l7_t < rand && rand <= l8_t) {
+      sphere = sphere_lights.l8;
+  }
+  if (l8_t < rand && rand <= l9_t) {
+      sphere = sphere_lights.l9;
   }
   return sample_from_sphere(sphere, hit.pos);
 }
@@ -218,19 +257,34 @@ fn sample_from_cosine(hit: HitInfo) -> vec3f {
 
 fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
   // FIXME: ライトの個数分追加が必要
-  var l1_dist = distance(hit.pos, sphere_lights.l1.center);
+  let l1_dist = distance(hit.pos, sphere_lights.l1.center);
   let l2_dist = distance(hit.pos, sphere_lights.l2.center);
   let l3_dist = distance(hit.pos, sphere_lights.l3.center);
   let l4_dist = distance(hit.pos, sphere_lights.l4.center);
-  let l1_w = 1.0 / (l1_dist * l1_dist);
-  let l2_w = 1.0 / (l2_dist * l2_dist);
-  let l3_w = 1.0 / (l3_dist * l3_dist);
-  let l4_w = 1.0 / (l4_dist * l4_dist);
-  let sum = l1_w + l2_w + l3_w + l4_w;
+  var l5_dist = distance(hit.pos, sphere_lights.l5.center);
+  let l6_dist = distance(hit.pos, sphere_lights.l6.center);
+  let l7_dist = distance(hit.pos, sphere_lights.l7.center);
+  let l8_dist = distance(hit.pos, sphere_lights.l8.center);
+  let l9_dist = distance(hit.pos, sphere_lights.l9.center);
+  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), sphere_lights.l1.emissive > 0.0f);
+  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), sphere_lights.l2.emissive > 0.0f);
+  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), sphere_lights.l3.emissive > 0.0f);
+  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), sphere_lights.l4.emissive > 0.0f);
+  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), sphere_lights.l5.emissive > 0.0f);
+  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), sphere_lights.l6.emissive > 0.0f);
+  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), sphere_lights.l7.emissive > 0.0f);
+  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), sphere_lights.l8.emissive > 0.0f);
+  let l9_w = select(0.0, 1.0 / (l9_dist * l9_dist), sphere_lights.l9.emissive > 0.0f);
+  let sum = l1_w + l2_w + l3_w + l4_w + l5_w + l6_w + l7_w + l8_w + l9_w;
   let light_pdf = l1_w * sphere_pdf(hit, sphere_lights.l1, dir) +
                   l2_w * sphere_pdf(hit, sphere_lights.l2, dir) +
                   l3_w * sphere_pdf(hit, sphere_lights.l3, dir) +
-                  l4_w * sphere_pdf(hit, sphere_lights.l4, dir);
+                  l4_w * sphere_pdf(hit, sphere_lights.l4, dir) +
+                  l5_w * sphere_pdf(hit, sphere_lights.l5, dir) +
+                  l6_w * sphere_pdf(hit, sphere_lights.l6, dir) +
+                  l7_w * sphere_pdf(hit, sphere_lights.l7, dir) +
+                  l8_w * sphere_pdf(hit, sphere_lights.l8, dir) +
+                  l9_w * sphere_pdf(hit, sphere_lights.l9, dir);
   return 0.5 * cosine_pdf(hit, dir) + 0.5 * light_pdf / sum;
 }
 
@@ -285,8 +339,9 @@ fn raytrace(path: Path, depth: i32) -> Path {
   // 光源の場合、トレースを終了
   if (emissive) {
     if (depth == 0) {
-      var light_col = hit.col / length(hit.col);
+      var light_col = hit.col;
       let dist = distance(camera.start.xyz, hit.pos.xyz);
+      light_col = light_col / dist;
       return Path(r, light_col, true);
     }
     // 照明計算
@@ -323,6 +378,11 @@ fn sample_hit(r: Ray) -> HitInfo {
   hit = intersect_sphere(r, sphere_lights.l2, hit);
   hit = intersect_sphere(r, sphere_lights.l3, hit);
   hit = intersect_sphere(r, sphere_lights.l4, hit);
+  hit = intersect_sphere(r, sphere_lights.l5, hit);
+  hit = intersect_sphere(r, sphere_lights.l6, hit);
+  hit = intersect_sphere(r, sphere_lights.l7, hit);
+  hit = intersect_sphere(r, sphere_lights.l8, hit);
+  hit = intersect_sphere(r, sphere_lights.l9, hit);
   return hit;
 }
 

@@ -19,7 +19,6 @@ Scene::Scene(Device &device) {
 
   /// Sphereの追加
   spheres_.emplace_back(Point3(-1.0, 0, -9), 0.3, Color3(0.8, 0.8, 0.8));
-  // TODO: 光源に変更
   //　最終位置
   float end_pos = 128;
   spheres_.emplace_back(Point3(0.0, 2.0, -(30 + end_pos)), 0.3, Color3(0.8, 0.8, 0.8));
@@ -335,10 +334,44 @@ void Scene::InitBindGroup(Device &device) {
  * SphereLightの更新
  */
 void Scene::UpdateSphereLights(Queue &queue, float t) {
-  Sphere l1(Point3(0.0, 2.0, -120), 0.3, Color3(500, 500, 500), true);
-  Sphere l2(Point3(0.0, 2.0, -30), 0.3, Color3(2, 150, 2), true);
-  Sphere l3(Point3(0.0, 2.0, -60), 0.3, Color3(150, 2, 2), true);
-  Sphere l4(Point3(0.0, 2.0, -90), 0.3, Color3(2, 2, 150), true);
-  SphereLights lights(l1, l2, l3, l4);
+  float cam_pos = t < 0.2f ? 8.0f * EaseInQuart(t / 0.2f) : 8.0f * EaseInQuart((t - 0.2f) / 0.8f + 1.0f);
+  float dist_from_cam = 5.0f;
+  float move_dist = cam_pos + dist_from_cam;
+  bool is_on = t < 0.95f;
+  bool l1_on = is_on && move_dist > 15 - dist_from_cam;
+  bool l2_on = is_on && move_dist > 30 - dist_from_cam;
+  bool l3_on = is_on && move_dist > 45 - dist_from_cam;
+  bool l4_on = is_on && move_dist > 60 - dist_from_cam;
+  bool l5_on = is_on && move_dist > 75 - dist_from_cam;
+  bool l6_on = is_on && move_dist > 90 - dist_from_cam;
+  bool l7_on = is_on && move_dist > 105 - dist_from_cam;
+  bool l8_on = is_on && move_dist > 120 - dist_from_cam;
+  Color3 light_col = Color3(1000, 1000, 1000);
+  Color3 light_off_col = Color3(0.2, 0.2, 0.2);
+  Color3 move_light_col = Color3(2000, 2000, 2000);
+  Color3 col1 = l1_on ? light_col + Color3(250, 0, 0) : light_off_col;
+  Color3 col2 = l2_on ? light_col + Color3(0, 250, 0) : light_off_col;
+  Color3 col3 = l3_on ? light_col + Color3(0, 0, 250) : light_off_col;
+  Color3 col4 = l4_on ? light_col + Color3(250, 250, 0) : light_off_col;
+  Color3 col5 = l5_on ? light_col + Color3(0, 250, 250) : light_off_col;
+  Color3 col6 = l6_on ? light_col + Color3(250, 0, 250) : light_off_col;
+  Color3 col7 = l7_on ? light_col + Color3(500, 0, 250) : light_off_col;
+  Color3 col8 = l8_on ? light_col + Color3(250, 0, 500) : light_off_col;
+  Sphere l1(Point3(0.0, 2.0, -15), 0.3, col1, l1_on);
+  Sphere l2(Point3(0.0, 2.0, -30), 0.3, col2, l2_on);
+  Sphere l3(Point3(0.0, 2.0, -45), 0.3, col3, l3_on);
+  Sphere l4(Point3(0.0, 2.0, -60), 0.3, col4, l4_on);
+  Sphere l5(Point3(0.0, 2.0, -75), 0.3, col5, l5_on);
+  Sphere l6(Point3(0.0, 2.0, -90), 0.3, col6, l6_on);
+  Sphere l7(Point3(0.0, 2.0, -105), 0.3, col7, l7_on);
+  Sphere l8(Point3(0.0, 2.0, -120), 0.3, col8, l8_on);
+//  float end_pos = 8.0f * EaseInQuart((0.95f - 0.2f) / 0.8f + 1.0f);
+//  float theta = (is_on ? cam_pos / 12.0f : Lerp(end_pos / 12.0f, 360.0f, (t - 0.95f) / 0.05f)) * (float) (M_PI * 2.0f);
+  float theta = cam_pos / 12.0f * (float) (M_PI * 2.0f);
+  float x = cos(theta);
+  float y = sin(theta);
+  Point3 origin = Vec3(x, y, 0.01f - move_dist);
+  Sphere move_l(origin, 0.1, move_light_col, true);
+  SphereLights lights(l1, l2, l3, l4, l5, l6, l7, l8, move_l);
   queue.writeBuffer(sphere_light_buffer_, 0, &lights, sizeof(SphereLights));
 }
