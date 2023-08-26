@@ -49,7 +49,7 @@ private:
 
     Buffer CreateQuadBuffer(Device &device);
 
-    Buffer CreateSphereBuffer(Device &device, uint32_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation);
+    Buffer CreateSphereBuffer(Device &device, size_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation);
 
     void InitBindGroup(Device &device);
 

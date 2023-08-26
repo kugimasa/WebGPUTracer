@@ -88,7 +88,7 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
     // ポリゴンでループ
     size_t index_offset = 0;
     for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); ++f) {
-      size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+      auto fv = size_t(shapes[s].mesh.num_face_vertices[f]);
 
       // ポリゴン内の頂点でループ
       for (size_t v = 0; v < fv; ++v) {
@@ -97,11 +97,11 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
         auto vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
         auto vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
         auto vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
-        auto nx = 0;
-        auto ny = 0;
-        auto nz = 1;
-        auto tx = 0;
-        auto ty = 0;
+        auto nx = 0.0f;
+        auto ny = 0.0f;
+        auto nz = 1.0f;
+        auto tx = 0.0f;
+        auto ty = 0.0f;
 
         // 法線判定
         if (idx.normal_index >= 0) {
@@ -273,7 +273,7 @@ Buffer Scene::CreateQuadBuffer(Device &device) {
 /*
  * SphereBufferの作成
  */
-Buffer Scene::CreateSphereBuffer(Device &device, uint32_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation) {
+Buffer Scene::CreateSphereBuffer(Device &device, size_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation) {
   BufferDescriptor sphere_buffer_desc{};
   auto sphere_buffer_size = sphere_stride_ * num;
   sphere_buffer_desc.size = sphere_buffer_size;
