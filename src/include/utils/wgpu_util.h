@@ -77,7 +77,7 @@ void inline OnQueueWorkDone(QueueWorkDoneStatus status) {
 ShaderModule inline LoadShaderModule(const fs::path &path, Device device) {
   std::ifstream file(path);
   if (!file.is_open()) {
-    Error(PrintInfoType::Portracer, "Could not load shader from path: ", path);
+    Error(PrintInfoType::WebGPUTracer, "Could not load shader from path: ", path);
     return nullptr;
   }
   file.seekg(0, std::ios::end);

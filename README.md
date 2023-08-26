@@ -1,6 +1,6 @@
-# Portracer (_)=---=(_)
+# WebGPUTracer (_)=---=(_)
 
-[![Windows Build wgpu-native](https://github.com/kugimasa/Portracer/actions/workflows/windows_build_wgpu.yml/badge.svg)](https://github.com/kugimasa/Portracer/actions/workflows/windows_build_wgpu.yml) [![Windows Build Dawn](https://github.com/kugimasa/Portracer/actions/workflows/windows_build_dawn.yml/badge.svg)](https://github.com/kugimasa/Portracer/actions/workflows/windows_build_dawn.yml)
+[![Windows Build wgpu-native](https://github.com/kugimasa/WebGPUTracer/actions/workflows/windows_build_wgpu.yml/badge.svg)](https://github.com/kugimasa/WebGPUTracer/actions/workflows/windows_build_wgpu.yml) [![Windows Build Dawn](https://github.com/kugimasa/WebGPUTracer/actions/workflows/windows_build_dawn.yml/badge.svg)](https://github.com/kugimasa/WebGPUTracer/actions/workflows/windows_build_dawn.yml)
 
 A WebGPU ray tracer for Ray Tracing Camp 9 (2023)
 

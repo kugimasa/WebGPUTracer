@@ -1,19 +1,24 @@
 #pragma once
+
 #include <iostream>
 #include <string>
 
 enum class PrintInfoType {
-  WebGPU,
-  GLFW,
-  Portracer,
+    WebGPU,
+    GLFW,
+    WebGPUTracer,
 };
 
 std::string inline GetInfoTypeStr(PrintInfoType info_type) {
   switch (info_type) {
-    case PrintInfoType::WebGPU:return "WebGPU";
-    case PrintInfoType::GLFW:return "GLFW";
-    case PrintInfoType::Portracer:return "Portracer";
-    default:return "";
+    case PrintInfoType::WebGPU:
+      return "WebGPU";
+    case PrintInfoType::GLFW:
+      return "GLFW";
+    case PrintInfoType::WebGPUTracer:
+      return "WebGPUTracer";
+    default:
+      return "";
   }
 }
 

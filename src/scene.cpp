@@ -72,13 +72,13 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
   reader_config.mtl_search_path = "./assets/obj/";
   if (!reader.ParseFromFile(file_path, reader_config)) {
     if (!reader.Error().empty()) {
-      Error(PrintInfoType::Portracer, "TinyObjReader: ", reader.Error());
+      Error(PrintInfoType::WebGPUTracer, "TinyObjReader: ", reader.Error());
     }
     exit(1);
   }
 
   if (!reader.Warning().empty()) {
-    Print(PrintInfoType::Portracer, "TinyObjReader: ", reader.Warning());
+    Print(PrintInfoType::WebGPUTracer, "TinyObjReader: ", reader.Warning());
   }
   tinyobj::attrib_t attrib = reader.GetAttrib();
   std::vector<tinyobj::shape_t> shapes = reader.GetShapes();

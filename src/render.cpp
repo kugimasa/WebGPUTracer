@@ -17,7 +17,7 @@ bool Renderer::OnInit(bool hasWindow) {
     /// Create Window
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    window_ = glfwCreateWindow(WIDTH, HEIGHT, "Portracer (_)=---=(_)", NULL, NULL);
+    window_ = glfwCreateWindow(WIDTH, HEIGHT, "WebGPUTracer (_)=---=(_)", NULL, NULL);
   }
 
   buffer_size_ = 64 * sizeof(float);   // seed
@@ -95,7 +95,7 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
   // Minimal descriptor setting
   DeviceDescriptor device_desc = {};
-  device_desc.label = "Portracer Device";
+  device_desc.label = "WebGPUTracer Device";
   device_desc.requiredFeaturesCount = 0;
   device_desc.requiredLimits = &requiredLimits;
   device_desc.defaultQueue.label = "Default Queue";
@@ -343,7 +343,7 @@ void Renderer::InitBindGroup() {
 
 /// \brief Compute pass
 bool Renderer::OnCompute(uint32_t start_frame, uint32_t end_frame) {
-  Print(PrintInfoType::Portracer, "Running compute pass ...");
+  Print(PrintInfoType::WebGPUTracer, "Running compute pass ...");
   auto success = false;
   // chrono変数
   std::chrono::system_clock::time_point start, end;
@@ -359,7 +359,7 @@ bool Renderer::OnCompute(uint32_t start_frame, uint32_t end_frame) {
   double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
   std::ostringstream sout;
   sout << elapsed * 0.001 << "(sec)s";
-  Print(PrintInfoType::Portracer, "Finished: ", sout.str());
+  Print(PrintInfoType::WebGPUTracer, "Finished: ", sout.str());
   return success;
 }
 
@@ -419,7 +419,7 @@ bool Renderer::OnRender(uint32_t frame) {
   sout << std::setw(3) << std::setfill('0') << frame;
   std::string output_file = OUTPUT_DIR "/" + sout.str() + ".png";
   if (!saveTexture(output_file.c_str(), device_, texture_, 0 /* output MIP level */)) {
-    Error(PrintInfoType::Portracer, "Image output failed.");
+    Error(PrintInfoType::WebGPUTracer, "Image output failed.");
     return false;
   }
   // Clean up

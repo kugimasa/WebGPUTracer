@@ -1,7 +1,7 @@
 #include "renderer.h"
 
 int main(int argc, char *argv[]) {
-  Print(PrintInfoType::Portracer, "Starting Portracer (_)=---=(_)");
+  Print(PrintInfoType::WebGPUTracer, "Starting WebGPUTracer (_)=---=(_)");
   Renderer renderer;
   bool hasWindow = false;
   renderer.OnInit(hasWindow);
@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   uint32_t start_frame = 1;
   uint32_t end_frame = 600;
   // コマンドライン入力形式
-  // ./Portracer.exe --frame [start] [end]
+  // ./WebGPUTracer.exe --frame [start] [end]
   if (argc == 4) {
     if (strcmp(argv[1], "--frame") == 0) {
       start_frame = (uint32_t) atoi(argv[2]);
@@ -26,11 +26,11 @@ int main(int argc, char *argv[]) {
 
   // ComputePipeline
   if (!renderer.OnCompute(start_frame, end_frame)) {
-    Error(PrintInfoType::Portracer, "(_)=--.. Something went wrong");
+    Error(PrintInfoType::WebGPUTracer, "(_)=--.. Something went wrong");
     return 1;
   }
 
   renderer.OnFinish();
-  Print(PrintInfoType::Portracer, "(_)=---=(_) Portracer Finished");
+  Print(PrintInfoType::WebGPUTracer, "(_)=---=(_) WebGPUTracer Finished");
   return 0;
 }
