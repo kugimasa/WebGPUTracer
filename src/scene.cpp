@@ -23,7 +23,7 @@ Scene::Scene(Device &device) {
   spheres_.emplace_back(Point3(1.0f, -0.5f, -30.0f), 0.3f, Color3(0.4f, 0.8f, 0.1f));
   spheres_.emplace_back(Point3(-1.5f, 1.5f, -40.0f), 0.3f, Color3(0.5f, 0.2f, 0.7f));
   spheres_.emplace_back(Point3(0.75f, 1.8f, -50.0f), 0.3f, Color3(0.1f, 0.6f, 0.3f));
-  spheres_.emplace_back(Point3(1.65f, -0.3f, -60.0f), 0.3f, Color3(0.3f, 0.2, 0.1f));
+  spheres_.emplace_back(Point3(1.65f, -0.3f, -60.0f), 0.3f, Color3(0.3f, 0.2f, 0.1f));
   spheres_.emplace_back(Point3(0.3f, 0.5f, -70.0f), 0.3f, Color3(0.4f, 0.5f, 0.4f));
   spheres_.emplace_back(Point3(-1.0f, -0.5f, -80.0f), 0.3f, Color3(0.7f, 0.1f, 0.7f));
   spheres_.emplace_back(Point3(1.0f, -1.8f, -90.0f), 0.3f, Color3(0.1f, 0.3f, 0.2f));
