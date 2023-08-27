@@ -18,17 +18,19 @@ Scene::Scene(Device &device) {
   cb.PushToQuads(quads_);
 
   /// Sphereの追加
-  spheres_.emplace_back(Point3(-1.0f, 0.0f, -10.0f), 0.3f, Color3(0.8f, 0.8f, 0.8f));
-  spheres_.emplace_back(Point3(2.0f, 0.5f, -20.0f), 0.3f, Color3(0.8f, 0.2f, 0.4f));
-  spheres_.emplace_back(Point3(1.0f, -0.5f, -30.0f), 0.3f, Color3(0.4f, 0.8f, 0.1f));
-  spheres_.emplace_back(Point3(-1.5f, 1.5f, -40.0f), 0.3f, Color3(0.5f, 0.2f, 0.7f));
-  spheres_.emplace_back(Point3(0.75f, 1.8f, -50.0f), 0.3f, Color3(0.1f, 0.6f, 0.3f));
-  spheres_.emplace_back(Point3(1.65f, -0.3f, -60.0f), 0.3f, Color3(0.3f, 0.2f, 0.1f));
-  spheres_.emplace_back(Point3(0.3f, 0.5f, -70.0f), 0.3f, Color3(0.4f, 0.5f, 0.4f));
-  spheres_.emplace_back(Point3(-1.0f, -0.5f, -80.0f), 0.3f, Color3(0.7f, 0.1f, 0.7f));
-  spheres_.emplace_back(Point3(1.0f, -1.8f, -90.0f), 0.3f, Color3(0.1f, 0.3f, 0.2f));
-  spheres_.emplace_back(Point3(-1.8f, 0.75f, -100.0f), 0.3f, Color3(0.8f, 0.6f, 0.2f));
-  spheres_.emplace_back(Point3(0.75f, 0.5f, -110.0f), 0.3f, Color3(0.2f, 0.4f, 0.5f));
+  auto white = Color3(0.73f, 0.73f, 0.73f);
+  spheres_.emplace_back(Point3(-1.0f, 0.0f, -10.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(0.0f, 1.0f, -20.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(1.0f, 0.0f, -30.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(0.0f, -1.0f, -40.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(-1.0f, 0.0f, -50.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(0.0f, 1.0f, -60.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(1.0f, 0.0f, -70.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(0.0f, -1.0f, -80.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(-1.0f, 0.0f, -90.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(0.0f, 1.0f, -100.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(1.0f, 0.0f, -110.0f), 0.3f, white);
+  spheres_.emplace_back(Point3(0.0f, -1.0f, -120.0f), 0.3f, white);
   InitBindGroupLayout(device);
   InitBuffers(device);
   InitBindGroup(device);
