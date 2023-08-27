@@ -29,16 +29,10 @@ include_directories(src/include)
 include_directories("external/stb")
 include_directories("external/tinyobjloader")
 
-if (DEV_MODE)
-    target_compile_definitions(WebGPUTracer PRIVATE
-                               RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
-                               )
-else ()
-    file(COPY resources DESTINATION ${CMAKE_BINARY_DIR})
-    target_compile_definitions(WebGPUTracer PRIVATE
-                               RESOURCE_DIR="./resources"
-                               )
-endif ()
+file(COPY resources DESTINATION ${CMAKE_BINARY_DIR})
+target_compile_definitions(WebGPUTracer PRIVATE
+                           RESOURCE_DIR="./resources"
+                           )
 
 target_link_libraries(WebGPUTracer PRIVATE glfw webgpu glfw3webgpu)
 
