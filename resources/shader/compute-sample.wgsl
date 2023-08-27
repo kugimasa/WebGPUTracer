@@ -6,7 +6,7 @@ const kYup = vec3f(0.0, 1.0, 0.0);
 const kRayDepth = 5;
 const kRayMin = 1e-6;
 const kRayMax = 1e20;
-const kSPP = 50;
+const kSPP = 65;
 const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
 
@@ -177,14 +177,14 @@ fn sample_from_light(hit: HitInfo) -> vec3f {
   let l6_dist = distance(hit.pos, sphere_lights.l6.center);
   let l7_dist = distance(hit.pos, sphere_lights.l7.center);
   let l8_dist = distance(hit.pos, sphere_lights.l8.center);
-  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), bool(sphere_lights.l1.emissive));
-  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), bool(sphere_lights.l2.emissive));
-  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), bool(sphere_lights.l3.emissive));
-  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), bool(sphere_lights.l4.emissive));
-  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), bool(sphere_lights.l5.emissive));
-  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), bool(sphere_lights.l6.emissive));
-  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), bool(sphere_lights.l7.emissive));
-  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), bool(sphere_lights.l8.emissive));
+  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), bool(sphere_lights.l1.emissive > 0.0f));
+  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), bool(sphere_lights.l2.emissive > 0.0f));
+  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), bool(sphere_lights.l3.emissive > 0.0f));
+  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), bool(sphere_lights.l4.emissive > 0.0f));
+  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), bool(sphere_lights.l5.emissive > 0.0f));
+  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), bool(sphere_lights.l6.emissive > 0.0f));
+  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), bool(sphere_lights.l7.emissive > 0.0f));
+  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), bool(sphere_lights.l8.emissive > 0.0f));
   let sum = l1_w + l2_w + l3_w + l4_w + l5_w + l6_w + l7_w + l8_w;
   let l1_t = l1_w / sum;
   let l2_t = l1_t + l2_w / sum;
@@ -258,14 +258,14 @@ fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
   let l6_dist = distance(hit.pos, sphere_lights.l6.center);
   let l7_dist = distance(hit.pos, sphere_lights.l7.center);
   let l8_dist = distance(hit.pos, sphere_lights.l8.center);
-  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), bool(sphere_lights.l1.emissive));
-  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), bool(sphere_lights.l2.emissive));
-  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), bool(sphere_lights.l3.emissive));
-  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), bool(sphere_lights.l4.emissive));
-  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), bool(sphere_lights.l5.emissive));
-  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), bool(sphere_lights.l6.emissive));
-  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), bool(sphere_lights.l7.emissive));
-  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), bool(sphere_lights.l8.emissive));
+  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), bool(sphere_lights.l1.emissive > 0.0f));
+  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), bool(sphere_lights.l2.emissive > 0.0f));
+  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), bool(sphere_lights.l3.emissive > 0.0f));
+  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), bool(sphere_lights.l4.emissive > 0.0f));
+  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), bool(sphere_lights.l5.emissive > 0.0f));
+  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), bool(sphere_lights.l6.emissive > 0.0f));
+  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), bool(sphere_lights.l7.emissive > 0.0f));
+  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), bool(sphere_lights.l8.emissive > 0.0f));
   let sum = l1_w + l2_w + l3_w + l4_w + l5_w + l6_w + l7_w + l8_w;
   let light_pdf = l1_w * sphere_pdf(hit, sphere_lights.l1, dir) +
                   l2_w * sphere_pdf(hit, sphere_lights.l2, dir) +
@@ -400,7 +400,7 @@ fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   }
   let norm = faceForward(quad.norm.xyz, r.dir.xyz, quad.norm.xyz);
   let uv = vec2f(a, b);
-  return HitInfo(ray_dist, bool(quad.emissive), 1u, pos, norm, uv, quad.col);
+  return HitInfo(ray_dist, bool(quad.emissive > 0.0f), 1u, pos, norm, uv, quad.col);
 }
 
 fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
@@ -430,7 +430,7 @@ fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
   let sphere_norm = (pos - sphere.center) / sphere.radius;
   let norm = faceForward(sphere_norm, r.dir.xyz, sphere_norm);
   let uv = sphere_uv(norm);
-  return HitInfo(ray_dist, bool(sphere.emissive), 2u, pos, norm, uv, sphere.col);
+  return HitInfo(ray_dist, bool(sphere.emissive > 0.0f), 2u, pos, norm, uv, sphere.col);
 }
 
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;

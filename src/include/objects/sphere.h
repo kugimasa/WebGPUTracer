@@ -6,7 +6,7 @@ class Sphere {
 public:
     Sphere() = default;
 
-    explicit Sphere(Point3 center, float radius, Color3 color, bool emissive = false) :
+    explicit Sphere(Point3 center, float radius, Color3 color, float emissive = 0.0f) :
             center_(center),
             radius_(radius),
             color_(color),
@@ -16,5 +16,5 @@ public:
     Point3 center_;
     float radius_;
     Color3 color_;
-    bool emissive_;
+    float emissive_;
 };

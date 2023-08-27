@@ -266,7 +266,7 @@ Buffer Scene::CreateQuadBuffer(Device &device) {
     quad_data[quad_offset++] = quad.color_[1];
     quad_data[quad_offset++] = quad.color_[2];
     /// エミッシブ
-    quad_data[quad_offset++] = quad.emissive_;
+    quad_data[quad_offset++] = quad.emissive_ ? 1.0f : 0.0f;
   }
   quad_buffer.unmap();
   return quad_buffer;
