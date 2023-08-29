@@ -84,11 +84,11 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 3;
   requiredLimits.limits.maxStorageBufferBindingSize = WIDTH * HEIGHT * sizeof(float);;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
-  requiredLimits.limits.maxComputeWorkgroupSizeX = 120;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 45;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 60;
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
-  requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 384;
-  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 120;
+  requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 256;
+  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 80;
   // This must be set even if we do not use storage buffers for now
   requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
   // This must be set even if we do not use uniform buffers for now
@@ -405,7 +405,7 @@ bool Renderer::OnRender(uint32_t frame) {
   uint32_t invocation_count_x = texture_size_.width;
   uint32_t invocation_count_y = texture_size_.height;
   uint32_t workgroup_size_x = 16;
-  uint32_t workgroup_size_y = 24;
+  uint32_t workgroup_size_y = 16;
   // This ceils invocationCountX / workgroupSizePerDim
   uint32_t workgroup_count_x = (invocation_count_x + workgroup_size_x - 1) / workgroup_size_x;
   uint32_t workgroup_count_y = (invocation_count_y + workgroup_size_y - 1) / workgroup_size_y;

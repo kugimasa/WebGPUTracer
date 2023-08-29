@@ -40,8 +40,8 @@ private:
     void InitBindGroup();
 
 private:
-    static const uint32_t WIDTH = 1920;
-    static const uint32_t HEIGHT = 1080;
+    static const uint32_t WIDTH = 1280;
+    static const uint32_t HEIGHT = 960;
     static const uint32_t MAX_FRAME = 600;
     Camera camera_{};
     Scene scene_{};
