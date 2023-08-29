@@ -8,7 +8,7 @@ inst_addr1 = sys.argv[2]
 key_path = R'C:\Users\Administrator\.ssh\id_rsa'
 
 # ノンブロッキング、つまりローカルのコマンドの終了は待たない。
-local_commands = R'WebGPUTracer --frame 1 300'
+local_commands = R'WebGPUTracer --frame 1 320'
 local_process = subprocess.Popen(local_commands.split(' '))
 
 ssh = paramiko.SSHClient()
@@ -19,7 +19,7 @@ ssh.connect(inst_addr1, username='administrator', pkey=key)
 # ノンブロッキング、つまりリモートのコマンドの終了は待たない。
 remote_commands = R"""
 cd $home\kugi_gpu
-.\WebGPUTracer --frame 301 600
+.\WebGPUTracer --frame 321 600
 """
 (_, remote_stdout, remote_stderr) = ssh.exec_command(remote_commands)
 
