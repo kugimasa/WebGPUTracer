@@ -85,7 +85,7 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxStorageBufferBindingSize = WIDTH * HEIGHT * sizeof(float);;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
   requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 60;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 45;
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 256;
   requiredLimits.limits.maxComputeWorkgroupsPerDimension = 80;
