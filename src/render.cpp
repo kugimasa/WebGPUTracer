@@ -288,7 +288,9 @@ void Renderer::InitComputePipeline() {
                                                       bind_group_layout_};
   layout_desc.bindGroupLayoutCount = 3;
   layout_desc.bindGroupLayouts = (WGPUBindGroupLayout *) bind_group_layouts.data();
+  Print(PrintInfoType::WebGPU, "Creating pipeline layout ...");
   pipeline_layout_ = device_.createPipelineLayout(layout_desc);
+  Print(PrintInfoType::WebGPU, "Compute pipeline: ", pipeline_layout_);
 
   /// Compute pipeline setup
   ComputePipelineDescriptor pipeline_desc;
@@ -298,6 +300,7 @@ void Renderer::InitComputePipeline() {
   pipeline_desc.compute.module = shader_module;
   pipeline_desc.layout = pipeline_layout_;
   /// Create a compute pipeline
+  Print(PrintInfoType::WebGPU, "Creating compute pipeline ...");
   compute_pipeline_ = device_.createComputePipeline(pipeline_desc);
   Print(PrintInfoType::WebGPU, "Compute pipeline: ", compute_pipeline_);
 }
