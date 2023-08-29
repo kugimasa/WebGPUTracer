@@ -84,11 +84,11 @@ bool Renderer::InitDevice() {
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 3;
   requiredLimits.limits.maxStorageBufferBindingSize = WIDTH * HEIGHT * sizeof(float);;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
-  requiredLimits.limits.maxComputeWorkgroupSizeX = 80;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 60;
+  requiredLimits.limits.maxComputeWorkgroupSizeX = 240;
+  requiredLimits.limits.maxComputeWorkgroupSizeY = 135;
   requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
   requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 64;
-  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 80;
+  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 250;
   // This must be set even if we do not use storage buffers for now
   requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
   // This must be set even if we do not use uniform buffers for now
