@@ -6,7 +6,7 @@ const kYup = vec3f(0.0, 1.0, 0.0);
 const kRayDepth = 5;
 const kRayMin = 1e-6;
 const kRayMax = 1e20;
-const kSPP = 50;
+const kSPP = 100;
 const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
 
@@ -436,7 +436,7 @@ fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
 @group(2) @binding(1) var frameBuffer: texture_storage_2d<rgba8unorm,write>;
 
-@compute @workgroup_size(8, 8)
+@compute @workgroup_size(16, 24)
 fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
   let screen_size = vec2u(textureDimensions(frameBuffer));
   if (all(invocation_id.xy < screen_size)) {
