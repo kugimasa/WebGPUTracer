@@ -69,8 +69,7 @@ bool Renderer::InitDevice() {
   RequiredLimits requiredLimits = Default;
   requiredLimits.limits.maxBindGroups = 3;
   requiredLimits.limits.maxUniformBuffersPerShaderStage = 2;
-  requiredLimits.limits.maxUniformBufferBindingSize = sizeof(Scene::SphereLights);
-  // origin(3), target(3), aspect(1), time(1), seed(1)
+  requiredLimits.limits.maxUniformBufferBindingSize = sizeof(Camera::CameraParam);
   // Without this, wgpu-native crashes
   requiredLimits.limits.maxVertexAttributes = 3;
   requiredLimits.limits.maxVertexBufferArrayStride = 10 * sizeof(float);
@@ -118,9 +117,9 @@ bool Renderer::InitDevice() {
   }, nullptr);
 #endif
 
-  /// カメラの初期化
-  camera_ = Camera(device_);
-  /// シーンの初期化
+  /// Initialize Camera
+  camera_ = Camera(device_, SPP);
+  /// Initialize Scene
   scene_ = Scene(device_);
 
   /// Get device queue
@@ -373,11 +372,8 @@ bool Renderer::OnRender(uint32_t frame) {
   start = std::chrono::system_clock::now();
   float t = (float) frame / (float) MAX_FRAME;
   /// Update camera
-  /// NOTE: 原点が(0, 0, 0)だと描画がうまくいかないことがある(FarのQuadなど)
   float aspect = (float) WIDTH / (float) HEIGHT;
   camera_.Update(queue_, t, aspect);
-  /// UpdateScene
-  scene_.UpdateSphereLights(queue_, t);
 
   /// Input buffer
   std::vector<float> input(buffer_size_ / sizeof(float));
@@ -506,14 +502,8 @@ void Renderer::OnFinish() {
   texture_.destroy();
   texture_.release();
   /// Release WebGPU buffer
-  // uniform_buffer_.destroy();
-  // uniform_buffer_.release();
   input_buffer_.destroy();
   input_buffer_.release();
-  // output_buffer_.destroy();
-  // output_buffer_.release();
-  // map_buffer_.destroy();
-  // map_buffer_.release();
   /// Release WebGPU pipelines
   // render_pipeline_.release();
   compute_pipeline_.release();

@@ -18,23 +18,7 @@ public:
         Objects() : bind_group_layout_(nullptr), bind_group_(nullptr) {};
     };
 
-    struct SphereLights {
-        Sphere l1_;
-        Sphere l2_;
-        Sphere l3_;
-        Sphere l4_;
-        Sphere l5_;
-        Sphere l6_;
-        Sphere l7_;
-        Sphere l8_;
-
-        SphereLights(Sphere l1, Sphere l2, Sphere l3, Sphere l4, Sphere l5, Sphere l6, Sphere l7, Sphere l8)
-                : l1_(l1), l2_(l2), l3_(l3), l4_(l4), l5_(l5), l6_(l6), l7_(l7), l8_(l8) {};
-    };
-
     void Release();
-
-    void UpdateSphereLights(Queue &queue, float t) const;
 
 private:
     void LoadObj(const char *file_path, Color3 color, Vec3 translation = ZERO_Vec3, bool emissive = false);
@@ -53,10 +37,6 @@ private:
 
     void InitBindGroup(Device &device);
 
-    size_t inline GetSphereLightsNum() {
-      return sizeof(SphereLights) / sizeof(Sphere);
-    };
-
 public:
     std::vector<Triangle> tris_;
     std::vector<Quad> quads_;
@@ -67,6 +47,5 @@ public:
     Buffer tri_buffer_ = nullptr;
     Buffer quad_buffer_ = nullptr;
     Buffer sphere_buffer_ = nullptr;
-    Buffer sphere_light_buffer_ = nullptr;
     Objects objects_ = {};
 };

@@ -6,7 +6,6 @@ const kYup = vec3f(0.0, 1.0, 0.0);
 const kRayDepth = 5;
 const kRayMin = 1e-6;
 const kRayMax = 1e20;
-const kSPP = 150;
 const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
 
@@ -20,11 +19,10 @@ struct CameraParam {
   end : vec4f,
   aspect : f32,
   fovy : f32,
-  time : f32,
+  spp : u32,
   seed : u32,
 };
 
-/// FIXME: Windowsビルドが落ちるため、`dab65be`の変更を元に戻す必要があるかもしれない
 /// shape: tri(0), quad(1), sphere(2)
 struct HitInfo {
   dist : f32,
@@ -65,18 +63,6 @@ struct Sphere {
   col : vec3f,
   emissive : f32,
 };
-
-/// CPPと揃える必要がある
-struct SphereLights {
-  l1 : Sphere,
-  l2 : Sphere,
-  l3 : Sphere,
-  l4 : Sphere,
-  l5 : Sphere,
-  l6 : Sphere,
-  l7 : Sphere,
-  l8 : Sphere,
-}
 
 fn fabs(x: f32) -> f32 {
   return select(x, -x, x < 0.0);
@@ -157,67 +143,7 @@ fn onb_local(onb: ONB, a: vec3f) -> vec3f {
 }
 
 fn sample_direction(hit: HitInfo) -> vec3f {
-  if (rand() < 0.5) {
-    // 光源の形状に基づいたサンプリング
-    return sample_from_light(hit);
-  } else {
-    // BxDFに基づいたサンプリング
     return sample_from_bxdf(hit);
-  }
-}
-
-fn sample_from_light(hit: HitInfo) -> vec3f {
-  // ヒット位置とライト位置を比較
-  // FIXME: ライトの個数分追加が必要
-  let l1_dist = distance(hit.pos, sphere_lights.l1.center);
-  let l2_dist = distance(hit.pos, sphere_lights.l2.center);
-  let l3_dist = distance(hit.pos, sphere_lights.l3.center);
-  let l4_dist = distance(hit.pos, sphere_lights.l4.center);
-  var l5_dist = distance(hit.pos, sphere_lights.l5.center);
-  let l6_dist = distance(hit.pos, sphere_lights.l6.center);
-  let l7_dist = distance(hit.pos, sphere_lights.l7.center);
-  let l8_dist = distance(hit.pos, sphere_lights.l8.center);
-  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), bool(sphere_lights.l1.emissive > 0.0f));
-  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), bool(sphere_lights.l2.emissive > 0.0f));
-  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), bool(sphere_lights.l3.emissive > 0.0f));
-  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), bool(sphere_lights.l4.emissive > 0.0f));
-  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), bool(sphere_lights.l5.emissive > 0.0f));
-  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), bool(sphere_lights.l6.emissive > 0.0f));
-  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), bool(sphere_lights.l7.emissive > 0.0f));
-  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), bool(sphere_lights.l8.emissive > 0.0f));
-  let sum = l1_w + l2_w + l3_w + l4_w + l5_w + l6_w + l7_w + l8_w;
-  let l1_t = l1_w / sum;
-  let l2_t = l1_t + l2_w / sum;
-  let l3_t = l2_t + l3_w / sum;
-  let l4_t = l3_t + l4_w / sum;
-  let l5_t = l4_t + l5_w / sum;
-  let l6_t = l5_t + l6_w / sum;
-  let l7_t = l6_t + l7_w / sum;
-  let l8_t = l7_t + l8_w / sum;
-  let rand = rand();
-  var sphere = sphere_lights.l1;
-  if (l1_t < rand && rand <= l2_t) {
-      sphere = sphere_lights.l2;
-  }
-  if (l2_t < rand && rand <= l3_t) {
-      sphere = sphere_lights.l3;
-  }
-  if (l3_t < rand && rand <= l4_t) {
-      sphere = sphere_lights.l4;
-  }
-  if (l4_t < rand && rand <= l5_t) {
-      sphere = sphere_lights.l5;
-  }
-  if (l5_t < rand && rand <= l6_t) {
-      sphere = sphere_lights.l6;
-  }
-  if (l6_t < rand && rand <= l7_t) {
-      sphere = sphere_lights.l7;
-  }
-  if (l7_t < rand && rand <= l8_t) {
-      sphere = sphere_lights.l8;
-  }
-  return sample_from_sphere(sphere, hit.pos);
 }
 
 fn sample_from_sphere(sphere: Sphere, pos: vec3f) -> vec3f {
@@ -248,36 +174,6 @@ fn sample_from_cosine(hit: HitInfo) -> vec3f {
   return onb_local(onb, a);
 }
 
-fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
-  // FIXME: ライトの個数分追加が必要
-  let l1_dist = distance(hit.pos, sphere_lights.l1.center);
-  let l2_dist = distance(hit.pos, sphere_lights.l2.center);
-  let l3_dist = distance(hit.pos, sphere_lights.l3.center);
-  let l4_dist = distance(hit.pos, sphere_lights.l4.center);
-  var l5_dist = distance(hit.pos, sphere_lights.l5.center);
-  let l6_dist = distance(hit.pos, sphere_lights.l6.center);
-  let l7_dist = distance(hit.pos, sphere_lights.l7.center);
-  let l8_dist = distance(hit.pos, sphere_lights.l8.center);
-  let l1_w = select(0.0, 1.0 / (l1_dist * l1_dist), bool(sphere_lights.l1.emissive > 0.0f));
-  let l2_w = select(0.0, 1.0 / (l2_dist * l2_dist), bool(sphere_lights.l2.emissive > 0.0f));
-  let l3_w = select(0.0, 1.0 / (l3_dist * l3_dist), bool(sphere_lights.l3.emissive > 0.0f));
-  let l4_w = select(0.0, 1.0 / (l4_dist * l4_dist), bool(sphere_lights.l4.emissive > 0.0f));
-  let l5_w = select(0.0, 1.0 / (l5_dist * l5_dist), bool(sphere_lights.l5.emissive > 0.0f));
-  let l6_w = select(0.0, 1.0 / (l6_dist * l6_dist), bool(sphere_lights.l6.emissive > 0.0f));
-  let l7_w = select(0.0, 1.0 / (l7_dist * l7_dist), bool(sphere_lights.l7.emissive > 0.0f));
-  let l8_w = select(0.0, 1.0 / (l8_dist * l8_dist), bool(sphere_lights.l8.emissive > 0.0f));
-  let sum = l1_w + l2_w + l3_w + l4_w + l5_w + l6_w + l7_w + l8_w;
-  let light_pdf = l1_w * sphere_pdf(hit, sphere_lights.l1, dir) +
-                  l2_w * sphere_pdf(hit, sphere_lights.l2, dir) +
-                  l3_w * sphere_pdf(hit, sphere_lights.l3, dir) +
-                  l4_w * sphere_pdf(hit, sphere_lights.l4, dir) +
-                  l5_w * sphere_pdf(hit, sphere_lights.l5, dir) +
-                  l6_w * sphere_pdf(hit, sphere_lights.l6, dir) +
-                  l7_w * sphere_pdf(hit, sphere_lights.l7, dir) +
-                  l8_w * sphere_pdf(hit, sphere_lights.l8, dir);
-  return 0.5 * cosine_pdf(hit, dir) + 0.5 * light_pdf / sum;
-}
-
 fn sphere_pdf(hit: HitInfo, sphere: Sphere, dir: vec3f) -> f32 {
   let squared_dist = dot(sphere.center - hit.pos, sphere.center - hit.pos);
   let cos_theta_max = sqrt(1.0 - sphere.radius * sphere.radius / squared_dist);
@@ -304,7 +200,6 @@ fn schlick_fresnel(col: vec3f, cos: f32) -> vec3f {
 @group(0) @binding(0) var<uniform> camera : CameraParam;
 @group(1) @binding(0) var<storage> quads : array<Quad>;
 @group(1) @binding(1) var<storage> spheres : array<Sphere>;
-@group(1) @binding(2) var<uniform> sphere_lights : SphereLights;
 
 fn setup_camera_ray(uv: vec2f) -> Ray {
     let theta = radians(camera.fovy);
@@ -326,7 +221,7 @@ fn raytrace(path: Path, depth: i32) -> Path {
   let r = path.ray;
   let hit = sample_hit(r);
   let emissive = hit.emissive;
-  // 光源の場合、トレースを終了
+  // If light end trace
   if (emissive) {
     if (depth == 0) {
       var light_col = hit.col;
@@ -334,16 +229,16 @@ fn raytrace(path: Path, depth: i32) -> Path {
       light_col = light_col / dist;
       return Path(r, light_col, true);
     }
-    // 照明計算
+    // Light estimation
     let ray_col = hit.col * path.col;
     return Path(r, ray_col, true);
   }
-  // 反射オブジェクトの場合
+  // Non-light object
   else {
-    // 反射
+    // Reflection
     let scatter_dir = sample_direction(hit);
-    let pdf_val = mixture_pdf(hit, scatter_dir);
-    // パスを更新
+    let pdf_val = cosine_pdf(hit, scatter_dir);
+    // Update path
     let scattered_ray = Ray(hit.pos, scatter_dir);
     let scattered_col = path.col * hit.col * scattering_pdf(hit, scatter_dir) / pdf_val;
     return Path(scattered_ray, scattered_col, false);
@@ -363,15 +258,6 @@ fn sample_hit(r: Ray) -> HitInfo {
     let sphere = spheres[idx];
     hit = intersect_sphere(r, sphere, hit);
   }
-  // 光源との交差判定
-  hit = intersect_sphere(r, sphere_lights.l1, hit);
-  hit = intersect_sphere(r, sphere_lights.l2, hit);
-  hit = intersect_sphere(r, sphere_lights.l3, hit);
-  hit = intersect_sphere(r, sphere_lights.l4, hit);
-  hit = intersect_sphere(r, sphere_lights.l5, hit);
-  hit = intersect_sphere(r, sphere_lights.l6, hit);
-  hit = intersect_sphere(r, sphere_lights.l7, hit);
-  hit = intersect_sphere(r, sphere_lights.l8, hit);
   return hit;
 }
 
@@ -442,7 +328,7 @@ fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
   if (all(invocation_id.xy < screen_size)) {
     seed = invocation_id.x + invocation_id.y * screen_size.x + u32(camera.seed) * screen_size.x * screen_size.y;;
     var col : vec3f;
-    for (var spp = 0; spp < kSPP; spp++) {
+    for (var spp = 0u; spp < camera.spp; spp++) {
       let u = (f32(invocation_id.x) + rand()) / f32(screen_size.x);
       let v = (f32(invocation_id.y) + rand()) / f32(screen_size.y);
       let r = setup_camera_ray(vec2f(u, v));
@@ -453,7 +339,7 @@ fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
           break;
         }
       }
-      col += max(path.col, kZero) / f32(kSPP);
+      col += max(path.col, kZero) / f32(camera.spp);
     }
     textureStore(frameBuffer, invocation_id.xy, vec4(col, 1.0));
   }

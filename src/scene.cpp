@@ -10,27 +10,15 @@
  * コンストラクタ
  */
 Scene::Scene(Device &device) {
-  /// Quadの追加
+  /// Add Quad Light
+  quads_.emplace_back(Point3(-3, 3, -3), Vec3(3, 0, 0), Vec3(0, 0, 3), Color3(7, 7, 7), true);
   auto pos = Point3(0.0f, 0.0f, 0.0f);
-  auto scale = Vec3(8.0f, 5.0f, 500.0f);
+  auto scale = Vec3(15.0f, 15.0f, 15.0f);
   auto cb = CornellBox(pos, scale);
-  /// CornellBoxの追加
+  /// Add CornellBox
   cb.PushToQuads(quads_);
-
-  /// Sphereの追加
-  auto white = Color3(0.73f, 0.73f, 0.73f);
-  spheres_.emplace_back(Point3(-1.0f, 0.0f, -10.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(0.0f, 1.0f, -20.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(1.0f, 0.0f, -30.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(0.0f, -1.0f, -40.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(-1.0f, 0.0f, -50.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(0.0f, 1.0f, -60.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(1.0f, 0.0f, -70.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(0.0f, -1.0f, -80.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(-1.0f, 0.0f, -90.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(0.0f, 1.0f, -100.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(1.0f, 0.0f, -110.0f), 0.3f, white);
-  spheres_.emplace_back(Point3(0.0f, -1.0f, -120.0f), 0.3f, white);
+  /// Add Sphere
+  spheres_.emplace_back(Point3(0.0f, -3.0f, 0.0f), 1.0f, Color3(0.5f, 0.5f, 0.5f));
   InitBindGroupLayout(device);
   InitBuffers(device);
   InitBindGroup(device);
@@ -45,8 +33,6 @@ void Scene::Release() {
   quad_buffer_.release();
   sphere_buffer_.destroy();
   sphere_buffer_.release();
-  sphere_light_buffer_.destroy();
-  sphere_light_buffer_.release();
   objects_.bind_group_layout_.release();
 }
 
@@ -135,7 +121,7 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
  * BindGroupLayoutの初期化
  */
 void Scene::InitBindGroupLayout(Device &device) {
-  std::vector<BindGroupLayoutEntry> bindings(3, Default);
+  std::vector<BindGroupLayoutEntry> bindings(2, Default);
   /// Scene: Quads
   bindings[0].binding = 0;
   bindings[0].buffer.type = BufferBindingType::ReadOnlyStorage;
@@ -144,10 +130,6 @@ void Scene::InitBindGroupLayout(Device &device) {
   bindings[1].binding = 1;
   bindings[1].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[1].visibility = ShaderStage::Compute;
-  /// Scene: Sphere Lights
-  bindings[2].binding = 2;
-  bindings[2].buffer.type = BufferBindingType::Uniform;
-  bindings[2].visibility = ShaderStage::Compute;
   /// BindGroupLayoutの作成
   BindGroupLayoutDescriptor bind_group_layout_desc{};
   bind_group_layout_desc.entryCount = (uint32_t) bindings.size();
@@ -162,7 +144,6 @@ void Scene::InitBindGroupLayout(Device &device) {
 void Scene::InitBuffers(Device &device) {
   quad_buffer_ = CreateQuadBuffer(device);
   sphere_buffer_ = CreateSphereBuffer(device, spheres_.size(), BufferUsage::Storage, true);
-  sphere_light_buffer_ = CreateSphereBuffer(device, GetSphereLightsNum(), BufferUsage::Uniform | BufferUsage::CopyDst, false);
 }
 
 /*
@@ -312,7 +293,7 @@ Buffer Scene::CreateSphereBuffer(Device &device, size_t num, WGPUBufferUsageFlag
  */
 void Scene::InitBindGroup(Device &device) {
   /// BindGroup を作成
-  std::vector<BindGroupEntry> entries(3, Default);
+  std::vector<BindGroupEntry> entries(2, Default);
   /// QuadBuffer
   entries[0].binding = 0;
   entries[0].buffer = quad_buffer_;
@@ -323,70 +304,9 @@ void Scene::InitBindGroup(Device &device) {
   entries[1].buffer = sphere_buffer_;
   entries[1].offset = 0;
   entries[1].size = sphere_stride_ * spheres_.size();
-  /// SphereLightBuffer
-  entries[2].binding = 2;
-  entries[2].buffer = sphere_light_buffer_;
-  entries[2].offset = 0;
-  entries[2].size = sizeof(SphereLights);
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = objects_.bind_group_layout_;
   bind_group_desc.entryCount = (uint32_t) entries.size();
   bind_group_desc.entries = (WGPUBindGroupEntry *) entries.data();
   objects_.bind_group_ = device.createBindGroup(bind_group_desc);
-}
-
-/*
- * SphereLightの更新
- */
-void Scene::UpdateSphereLights(Queue &queue, float t) const {
-  float cam_pos = t < 0.2f ? 8.0f * EaseInQuart(t / 0.2f) : 8.0f * EaseInQuart((t - 0.2f) / 0.8f + 1.0f);
-  float dist_from_cam = 5.0f;
-  float move_dist = cam_pos + dist_from_cam;
-  bool l1_on = move_dist > 15.0f - dist_from_cam;
-  bool l2_on = move_dist > 30.0f - dist_from_cam;
-  bool l3_on = move_dist > 45.0f - dist_from_cam;
-  bool l4_on = move_dist > 60.0f - dist_from_cam;
-  bool l5_on = move_dist > 75.0f - dist_from_cam;
-  bool l6_on = move_dist > 90.0f - dist_from_cam;
-  bool l7_on = move_dist > 105.0f - dist_from_cam;
-  float light_power = t < 0.15f ? Lerp(0.0f, 1000.0f, t / 0.15f) : t < 0.95f ? 1000.0f : Lerp(1000.0f, 0.0f, EaseOutCubic((t - 0.95f) / 0.05f));
-  Color3 light_off_col = Color3(0.2f, 0.2f, 0.2f);
-  Color3 move_light_col = light_power * Color3(1.0f, 1.0f, 1.0f);
-  Color3 col1 = l1_on ? light_power * Color3(255.0f / 255.0f, 0.0f, 0.0f) : light_off_col;
-  Color3 col2 = l2_on ? light_power * Color3(255.0f / 255.0f, 127.0f / 255.0f, 0.0f) : light_off_col;
-  Color3 col3 = l3_on ? light_power * Color3(255.0f / 255.0f, 255.0f / 255.0f, 0.0f) : light_off_col;
-  Color3 col4 = l4_on ? light_power * Color3(0.0f, 255.0f / 255.0f, 0.0f) : light_off_col;
-  Color3 col5 = l5_on ? light_power * Color3(0.0f, 0.0f, 255.0f / 255.0f) : light_off_col;
-  Color3 col6 = l6_on ? light_power * Color3(75.0f / 255.0f, 0.0f, 130.0f / 255.0f) : light_off_col;
-  Color3 col7 = l7_on ? light_power * Color3(148.0f / 255.0f, 0.0f, 211.0f / 255.0f) : light_off_col;
-  // 移動ライトの色を変化
-  if (l7_on) {
-    move_light_col = col7;
-  } else if (l6_on) {
-    move_light_col = col6;
-  } else if (l5_on) {
-    move_light_col = col5;
-  } else if (l4_on) {
-    move_light_col = col4;
-  } else if (l3_on) {
-    move_light_col = col3;
-  } else if (l2_on) {
-    move_light_col = col2;
-  } else if (l1_on) {
-    move_light_col = col1;
-  }
-  Sphere l1(Point3(0.0f, 2.0f, -15.0f), 0.3f, col1, l1_on);
-  Sphere l2(Point3(0.0f, 2.0f, -30.0f), 0.3f, col2, l2_on);
-  Sphere l3(Point3(0.0f, 2.0f, -45.0f), 0.3f, col3, l3_on);
-  Sphere l4(Point3(0.0f, 2.0f, -60.0f), 0.3f, col4, l4_on);
-  Sphere l5(Point3(0.0f, 2.0f, -75.0f), 0.3f, col5, l5_on);
-  Sphere l6(Point3(0.0f, 2.0f, -90.0f), 0.3f, col6, l6_on);
-  Sphere l7(Point3(0.0f, 2.0f, -105.0f), 0.3f, col7, l7_on);
-  float theta = cam_pos / 12.0f * (float) (M_PI * 2.0f);
-  float x = cos(theta);
-  float y = sin(theta);
-  Point3 origin = Vec3(x, y, 0.01f - move_dist);
-  Sphere move_l(origin, 0.1f, move_light_col, true);
-  SphereLights lights(l1, l2, l3, l4, l5, l6, l7, move_l);
-  queue.writeBuffer(sphere_light_buffer_, 0, &lights, sizeof(SphereLights));
 }
