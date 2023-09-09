@@ -10,15 +10,11 @@
  * コンストラクタ
  */
 Scene::Scene(Device &device) {
-  /// Add Quad Light
-  quads_.emplace_back(Point3(-3, 3, -3), Vec3(3, 0, 0), Vec3(0, 0, 3), Color3(7, 7, 7), true);
-  auto pos = Point3(0.0f, 0.0f, 0.0f);
-  auto scale = Vec3(15.0f, 15.0f, 15.0f);
-  auto cb = CornellBox(pos, scale);
   /// Add CornellBox
+  auto cb = CornellBox();
   cb.PushToQuads(quads_);
   /// Add Sphere
-  spheres_.emplace_back(Point3(0.0f, -3.0f, 0.0f), 1.0f, Color3(0.5f, 0.5f, 0.5f));
+  spheres_.emplace_back(Point3(190, 90, 190), 90, Color3(0.1, 0.2, 0.5));
   InitBindGroupLayout(device);
   InitBuffers(device);
   InitBindGroup(device);

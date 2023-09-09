@@ -5,14 +5,10 @@
 
 class CornellBox {
 public:
-    CornellBox() = default;
-
-    CornellBox(Point3 center, Vec3 scale);
+    CornellBox();
 
     void PushToQuads(std::vector<Quad> &quads);
 
 public:
-    Point3 center_;
-    Vec3 scale_;
     std::vector<Quad> quads_;
 };

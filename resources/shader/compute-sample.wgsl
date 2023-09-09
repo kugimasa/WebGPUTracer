@@ -3,8 +3,8 @@ const k_1_PI = 0.318309886184;
 const kNoHit = 0xffffffffu;
 const kXup = vec3f(1.0, 0.0, 0.0);
 const kYup = vec3f(0.0, 1.0, 0.0);
-const kRayDepth = 5;
-const kRayMin = 1e-6;
+const kRayDepth = 50;
+const kRayMin = 0.001;
 const kRayMax = 1e20;
 const kZero = vec3f(0.0, 0.0, 0.0);
 const kOne = vec3f(1.0, 1.0, 1.0);
@@ -143,7 +143,7 @@ fn onb_local(onb: ONB, a: vec3f) -> vec3f {
 }
 
 fn sample_direction(hit: HitInfo) -> vec3f {
-    return sample_from_bxdf(hit);
+    return sample_from_light(hit);
 }
 
 fn sample_from_sphere(sphere: Sphere, pos: vec3f) -> vec3f {
@@ -151,6 +151,13 @@ fn sample_from_sphere(sphere: Sphere, pos: vec3f) -> vec3f {
   let onb = build_onb_from_w(dir);
   let square_dist = dot(dir, dir);
   return onb_local(onb, rand_to_sphere(sphere.radius, square_dist));
+}
+
+fn sample_from_light(hit: HitInfo) -> vec3f {
+  // FIXME: Sampling from rect light directly
+  let on_light = vec3(rand() * 130.0 + 213.0, 554.0, rand() * 105.0 + 227.0);
+  var to_light = on_light - hit.pos;
+  return to_light;
 }
 
 fn sample_from_bxdf(hit: HitInfo) -> vec3f {
@@ -181,6 +188,14 @@ fn sphere_pdf(hit: HitInfo, sphere: Sphere, dir: vec3f) -> f32 {
   return 1.0 / solid_angle;
 }
 
+fn light_area_pdf(dir: vec3f) -> f32 {
+  // FIXME: Fixed light area
+  let light_area = 130.0 * 105.0;
+  let distance_squared = length(dir) * length(dir);
+  let light_cosine = fabs(normalize(dir).y) + kRayMin;
+  return distance_squared / (light_cosine * light_area);
+}
+
 fn cosine_pdf(hit: HitInfo, dir: vec3f) -> f32 {
   let onb = build_onb_from_w(hit.norm);
   let cos = dot(normalize(dir), onb.w);
@@ -201,19 +216,35 @@ fn schlick_fresnel(col: vec3f, cos: f32) -> vec3f {
 @group(1) @binding(0) var<storage> quads : array<Quad>;
 @group(1) @binding(1) var<storage> spheres : array<Sphere>;
 
-fn setup_camera_ray(uv: vec2f) -> Ray {
+fn pixel_sample_square(offset: vec2f, u: vec3f, v: vec3f) -> vec3f {
+    let recip_sqrt_spp = 1.0 / sqrt(f32(camera.spp));
+    let px = -0.5 + recip_sqrt_spp * (offset.x + rand());
+    let py = -0.5 + recip_sqrt_spp * (offset.y + rand());
+    return (px * u) + (py * v);
+}
+
+fn setup_camera_ray(pos: vec2f, offset: vec2f, screen_size: vec2f) -> Ray {
     let theta = radians(camera.fovy);
-    let half_h = tan(theta * 0.5);
-    let half_w = camera.aspect * half_h;
     let origin = camera.start.xyz;
     let end = camera.end.xyz;
+    let focal_length = length(origin - end);
+    let h = tan(theta * 0.5);
+    let viewport_height = 2.0 * h * focal_length;
+    let viewport_width = viewport_height * camera.aspect;
+
     let w = normalize(origin - end);
     let u = normalize(cross(kYup, w));
     let v = cross(w, u);
-    let lower_left_corner = origin - half_w * u - half_h * v - w;
-    let horizontal = 2.0 * half_w * u;
-    let vertical = 2.0 * half_h * v;
-    let ray_dir = origin - (lower_left_corner + uv.x * horizontal + uv.y * vertical);
+
+    let viewport_u = viewport_width * u;
+    let viewport_v = viewport_height * -v;
+    let pixel_delta_u = viewport_u / screen_size.x;
+    let pixel_delta_v = viewport_v / screen_size.y;
+    let viewport_upper_left = origin - focal_length * w - viewport_u * 0.5 - viewport_v * 0.5;
+    let pixel_origin = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+    let pixel_center = pixel_origin + (pos.x * pixel_delta_u) + (pos.y * pixel_delta_v);
+    let pixel_sample = pixel_center + pixel_sample_square(offset, pixel_delta_u, pixel_delta_v);
+    let ray_dir = pixel_sample - origin;
     return Ray(origin, ray_dir);
 }
 
@@ -224,10 +255,7 @@ fn raytrace(path: Path, depth: i32) -> Path {
   // If light end trace
   if (emissive) {
     if (depth == 0) {
-      var light_col = hit.col;
-      let dist = distance(camera.start.xyz, hit.pos.xyz);
-      light_col = light_col / dist;
-      return Path(r, light_col, true);
+      return Path(r, hit.col, true);
     }
     // Light estimation
     let ray_col = hit.col * path.col;
@@ -236,8 +264,9 @@ fn raytrace(path: Path, depth: i32) -> Path {
   // Non-light object
   else {
     // Reflection
-    let scatter_dir = sample_direction(hit);
-    let pdf_val = cosine_pdf(hit, scatter_dir);
+    var scatter_dir = sample_direction(hit);
+    let pdf_val = light_area_pdf(scatter_dir);
+    scatter_dir = normalize(scatter_dir);
     // Update path
     let scattered_ray = Ray(hit.pos, scatter_dir);
     let scattered_col = path.col * hit.col * scattering_pdf(hit, scatter_dir) / pdf_val;
@@ -328,18 +357,21 @@ fn compute_sample(@builtin(global_invocation_id) invocation_id: vec3<u32>) {
   if (all(invocation_id.xy < screen_size)) {
     seed = invocation_id.x + invocation_id.y * screen_size.x + u32(camera.seed) * screen_size.x * screen_size.y;;
     var col : vec3f;
-    for (var spp = 0u; spp < camera.spp; spp++) {
-      let u = (f32(invocation_id.x) + rand()) / f32(screen_size.x);
-      let v = (f32(invocation_id.y) + rand()) / f32(screen_size.y);
-      let r = setup_camera_ray(vec2f(u, v));
-      var path = Path(r, kOne, false);
-      for (var i = 0; i < kRayDepth; i++) {
-        path = raytrace(path, i);
-        if (path.end) {
-          break;
+    var sqrt_spp = u32(sqrt(f32(camera.spp)));
+    for (var s_j = 0u; s_j < sqrt_spp; s_j++) {
+      for (var s_i = 0u; s_i < sqrt_spp; s_i++) {
+        let pos = vec2f(f32(invocation_id.x), f32(invocation_id.y));
+        let offset = vec2f(f32(s_i), f32(s_j));
+        let r = setup_camera_ray(pos, offset, vec2f(screen_size));
+        var path = Path(r, kOne, false);
+        for (var i = 0; i < kRayDepth; i++) {
+          path = raytrace(path, i);
+          if (path.end) {
+            break;
+          }
         }
+        col += max(path.col, kZero) / f32(camera.spp);
       }
-      col += max(path.col, kZero) / f32(camera.spp);
     }
     textureStore(frameBuffer, invocation_id.xy, vec4(col, 1.0));
   }

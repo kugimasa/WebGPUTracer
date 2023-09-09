@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
   }
 
   uint32_t start_frame = 1;
-  uint32_t end_frame = 600;
+  uint32_t end_frame = 1;
   // コマンドライン入力形式
   // ./WebGPUTracer.exe --frame [start] [end]
   if (argc == 4) {
