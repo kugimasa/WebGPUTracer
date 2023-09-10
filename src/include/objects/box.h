@@ -7,19 +7,16 @@ class Box {
 public:
     Box() = default;
 
-    Box(Vec3 center, Vec3 scale, float rotation, Color3 color, bool emissive = false, bool face_out_ = true);
+    Box(Vec3 aabb_min, Vec3 aabb_max, Color3 color, float rotation = 0.0f, bool emissive = false);
 
     void PushQuads(std::vector<Quad> &quads);
 
 private:
-    [[nodiscard]] Vec3 FlipVec3(Vec3 v) const;
-
-private:
+    Vec3 aabb_min_;
+    Vec3 aabb_max_;
     Vec3 center_;
-    Vec3 scale_;
     double rotation_{};
     Color3 color_;
     bool emissive_{};
-    bool face_out_{};
     std::vector<Quad> quads_;
 };

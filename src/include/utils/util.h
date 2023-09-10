@@ -21,9 +21,9 @@ constexpr double INF = std::numeric_limits<double>::infinity();
 #define M_PI 3.14159265358979323846
 #endif
 
-inline double Deg2Rad(double degrees) {
+inline float Deg2Rad(float degrees) {
   // 1 / 180.0 = 0.00555555555
-  return degrees * M_PI * 0.00555555555;
+  return (float) (degrees * M_PI * 0.00555555555);
 }
 
 inline float Clamp(float x, float min, float max) {

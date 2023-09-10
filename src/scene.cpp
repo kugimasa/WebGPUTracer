@@ -5,6 +5,8 @@
 // Optional. define TINYOBJLOADER_USE_MAPBOX_EARCUT gives robust trinagulation. Requires C++11
 //#define TINYOBJLOADER_USE_MAPBOX_EARCUT
 #include "tiny_obj_loader.h"
+#include "utils/color_util.h"
+#include "objects/box.h"
 
 /*
  * コンストラクタ
@@ -13,8 +15,15 @@ Scene::Scene(Device &device) {
   /// Add CornellBox
   auto cb = CornellBox();
   cb.PushToQuads(quads_);
+  /// Add Boxes
+  auto box1 = Box(Point3(130, 0, 65), Point3(295, 165, 230), COL_WHITE);
+  auto box2 = Box(Point3(265, 0, 295), Point3(430, 330, 460), COL_WHITE);
+  box1.PushQuads(quads_);
+  box2.PushQuads(quads_);
   /// Add Sphere
-  spheres_.emplace_back(Point3(190, 90, 190), 90, Color3(0.1, 0.2, 0.5));
+  /// Dummy Sphere
+  spheres_.emplace_back(Point3(0, 0, 0), 0, COL_ZERO);
+  // spheres_.emplace_back(Point3(190, 90, 190), 90, COL_BLUE);
   InitBindGroupLayout(device);
   InitBuffers(device);
   InitBindGroup(device);

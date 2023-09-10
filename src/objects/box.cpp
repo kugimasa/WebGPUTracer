@@ -1,36 +1,26 @@
 #include "objects/box.h"
 
-Box::Box(Vec3 center, Vec3 scale, float rotation, Color3 color, bool emissive, bool face_out) {
-  center_ = center;
-  scale_ = scale;
+Box::Box(Vec3 aabb_min, Vec3 aabb_max, Color3 color, float rotation, bool emissive) {
+  aabb_min_ = aabb_min;
+  aabb_max_ = aabb_max;
+  center_ = (aabb_max_ + aabb_min_) / 2.0f;
   rotation_ = rotation;
   color_ = color;
   emissive_ = emissive;
-  face_out_ = face_out;
-  const Vec3 x = Vec3(cos(rotation) * (scale.X() / 2), 0, sin(rotation) * (scale.Z() / 2));
-  const Vec3 y = Vec3(0, scale.Y() / 2, 0);
-  const Vec3 z = Vec3(sin(rotation) * (scale.X() / 2), 0, -cos(rotation) * (scale.Z() / 2));
-  Quad pos_x = Quad(center + x, FlipVec3(-z), y, color, emissive);
-  Quad pos_y = Quad(center + y, FlipVec3(x), -z, color, emissive);
-  Quad pos_z = Quad(center + z, FlipVec3(x), y, color, emissive);
-  Quad neg_x = Quad(center - x, FlipVec3(z), y, color, emissive);
-  Quad neg_y = Quad(center - y, FlipVec3(x), z, color, emissive);
-  Quad neg_z = Quad(center - z, FlipVec3(-x), y, color, emissive);
-  quads_.push_back(pos_x);
-  quads_.push_back(pos_y);
-  quads_.push_back(pos_z);
-  quads_.push_back(neg_x);
-  quads_.push_back(neg_y);
-  quads_.push_back(neg_z);
+  // Rotate Y
+  auto min = Point3(fminf(aabb_min_.X(), aabb_max_.X()), fminf(aabb_min_.Y(), aabb_max_.Y()), fminf(aabb_min_.Z(), aabb_max_.Z()));
+  auto max = Point3(fmaxf(aabb_min_.X(), aabb_max_.X()), fmaxf(aabb_min_.Y(), aabb_max_.Y()), fmaxf(aabb_min_.Z(), aabb_max_.Z()));
+  auto dx = Vec3(max.X() - min.X(), 0, 0);
+  auto dy = Vec3(0, max.Y() - min.Y(), 0);
+  auto dz = Vec3(0, 0, max.Z() - min.Z());
+  quads_.emplace_back(Point3(min.X(), min.Y(), max.Z()), dx, dy, color);
+  quads_.emplace_back(Point3(max.X(), min.Y(), max.Z()), -dz, dy, color);
+  quads_.emplace_back(Point3(max.X(), min.Y(), min.Z()), -dx, dy, color);
+  quads_.emplace_back(Point3(min.X(), min.Y(), min.Z()), dz, dy, color);
+  quads_.emplace_back(Point3(min.X(), max.Y(), max.Z()), dx, -dz, color);
+  quads_.emplace_back(Point3(min.X(), min.Y(), min.Z()), dx, dz, color);;
 }
 
 void Box::PushQuads(std::vector<Quad> &quads) {
-  for (int i = 0; i < (int) quads_.size(); ++i) {
-    quads.push_back(quads_[i]);
-  }
+  quads.insert(quads.end(), quads_.begin(), quads_.end());
 }
-
-Vec3 Box::FlipVec3(Vec3 v) const {
-  return face_out_ ? -v : v;
-}
-
