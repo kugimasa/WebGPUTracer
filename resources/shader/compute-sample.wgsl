@@ -27,6 +27,7 @@ struct CameraParam {
 struct HitInfo {
   dist : f32,
   emissive : bool,
+  front_face : bool,
   shape : u32,
   pos : vec3f,
   norm : vec3f,
@@ -258,7 +259,7 @@ fn raytrace(path: Path, depth: i32) -> Path {
       return Path(r, hit.col, true);
     }
     // Light estimation
-    let ray_col = hit.col * path.col;
+    let ray_col = f32(hit.front_face) * hit.col * path.col;
     return Path(r, ray_col, true);
   }
   // Non-light object
@@ -279,6 +280,7 @@ fn sample_hit(r: Ray) -> HitInfo {
   hit.dist = kRayMax;
   hit.shape = kNoHit;
   hit.emissive = false;
+  hit.front_face = false;
   hit.col = kZero;
   for (var quad = 0u; quad < arrayLength(&quads); quad++) {
     hit = intersect_quad(r, quad, hit);
@@ -313,9 +315,10 @@ fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   if ((a < 0.0) || (1.0 < a) || (b < 0.0) || (1.0 < b)) {
     return closest;
   }
-  let norm = faceForward(quad.norm.xyz, r.dir.xyz, quad.norm.xyz);
+  let front_face = dot(r.dir.xyz, quad.norm.xyz) < 0.0;
+  let norm = select(-quad.norm.xyz, quad.norm.xyz, front_face);
   let uv = vec2f(a, b);
-  return HitInfo(ray_dist, bool(quad.emissive > 0.0f), 1u, pos, norm, uv, quad.col);
+  return HitInfo(ray_dist, bool(quad.emissive > 0.0f), front_face, 1u, pos, norm, uv, quad.col);
 }
 
 fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
@@ -343,9 +346,10 @@ fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
     return closest;
   }
   let sphere_norm = (pos - sphere.center) / sphere.radius;
-  let norm = faceForward(sphere_norm, r.dir.xyz, sphere_norm);
+  let front_face = dot(r.dir.xyz, sphere_norm) < 0.0;
+  let norm = select(-sphere_norm, sphere_norm, front_face);
   let uv = sphere_uv(norm);
-  return HitInfo(ray_dist, bool(sphere.emissive > 0.0f), 2u, pos, norm, uv, sphere.col);
+  return HitInfo(ray_dist, bool(sphere.emissive > 0.0f), front_face, 2u, pos, norm, uv, sphere.col);
 }
 
 @group(2) @binding(0) var<storage,read> inputBuffer: array<f32,64>;
