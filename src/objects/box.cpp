@@ -1,13 +1,11 @@
 #include "objects/box.h"
 
-Box::Box(vec3 aabb_min, vec3 aabb_max, Color3 color, float rotation, bool emissive) {
+Box::Box(vec3 aabb_min, vec3 aabb_max, Color3 color, bool emissive) {
   aabb_min_ = aabb_min;
   aabb_max_ = aabb_max;
   center_ = (aabb_max_ + aabb_min_) / 2.0f;
-  rotation_ = rotation;
   color_ = color;
   emissive_ = emissive;
-  // Rotate Y
   auto min = Point3(fminf(aabb_min_.x, aabb_max_.x), fminf(aabb_min_.y, aabb_max_.y), fminf(aabb_min_.z, aabb_max_.z));
   auto max = Point3(fmaxf(aabb_min_.x, aabb_max_.x), fmaxf(aabb_min_.y, aabb_max_.y), fmaxf(aabb_min_.z, aabb_max_.z));
   auto dx = vec3(max.x - min.x, 0, 0);
@@ -18,8 +16,24 @@ Box::Box(vec3 aabb_min, vec3 aabb_max, Color3 color, float rotation, bool emissi
   quads_.emplace_back(Point3(max.x, min.y, min.z), -dx, dy, color);
   quads_.emplace_back(Point3(min.x, min.y, min.z), dz, dy, color);
   quads_.emplace_back(Point3(min.x, max.y, max.z), dx, -dz, color);
-  quads_.emplace_back(Point3(min.x, min.y, min.z), dx, dz, color);;
+  quads_.emplace_back(Point3(min.x, min.y, min.z), dx, dz, color);
 }
+
+
+/// Rotate around the Y-axis
+void Box::RotateY(float angle) {
+  for (auto &quad: quads_) {
+    quad.RotateY(angle);
+  }
+}
+
+/// Translate
+void Box::Translate(vec3 direction) {
+  for (auto &quad: quads_) {
+    quad.Translate(direction);
+  }
+}
+
 
 void Box::PushQuads(std::vector<Quad> &quads) {
   quads.insert(quads.end(), quads_.begin(), quads_.end());

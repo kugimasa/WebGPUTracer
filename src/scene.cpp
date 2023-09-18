@@ -16,8 +16,12 @@ Scene::Scene(Device &device) {
   auto cb = CornellBox();
   cb.PushToQuads(quads_);
   /// Add Boxes
-  auto box1 = Box(Point3(130, 0, 65), Point3(295, 165, 230), COL_WHITE);
-  auto box2 = Box(Point3(265, 0, 295), Point3(430, 330, 460), COL_WHITE);
+  auto box1 = Box(Point3(0, 0, 0), Point3(165, 330, 165), COL_WHITE);
+  box1.RotateY(15);
+  box1.Translate(vec3(265, 0, 295));
+  auto box2 = Box(Point3(0, 0, 0), Point3(165, 165, 165), COL_WHITE);
+  box2.RotateY(-18);
+  box2.Translate(vec3(130, 0, 65));
   box1.PushQuads(quads_);
   box2.PushQuads(quads_);
   /// Add Sphere
@@ -222,9 +226,9 @@ Buffer Scene::CreateQuadBuffer(Device &device) {
   for (int idx = 0; idx < (int) quads_.size(); ++idx) {
     Quad quad = quads_[idx];
     /// 位置
-    quad_data[quad_offset++] = quad.center_[0];
-    quad_data[quad_offset++] = quad.center_[1];
-    quad_data[quad_offset++] = quad.center_[2];
+    quad_data[quad_offset++] = quad.q_[0];
+    quad_data[quad_offset++] = quad.q_[1];
+    quad_data[quad_offset++] = quad.q_[2];
     quad_data[quad_offset++] = dummy;
     /// 右ベクトル
     quad_data[quad_offset++] = quad.right_[0];
