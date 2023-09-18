@@ -40,7 +40,12 @@ else ()
                                )
 endif ()
 
-target_link_libraries(WebGPUTracer PRIVATE glfw webgpu glfw3webgpu)
+target_link_libraries(WebGPUTracer PRIVATE
+                      glfw
+                      glfw3webgpu
+                      glm
+                      webgpu
+                      )
 
 set_target_properties(WebGPUTracer PROPERTIES
                       CXX_STANDARD 17
