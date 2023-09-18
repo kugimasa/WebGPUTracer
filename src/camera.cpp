@@ -62,8 +62,8 @@ void Camera::InitBindGroup(Device &device) {
 }
 
 void Camera::Update(Queue &queue, float t, float aspect) {
-  Point3 origin = Vec3(278, 278, -800);
-  Point3 target = Vec3(278, 278, 0);
+  Point3 origin = vec3(278, 278, -800);
+  Point3 target = vec3(278, 278, 0);
   float fovy = 40.0f;
   CameraParam param(origin, target, aspect, fovy, spp_, RandSeed());
   queue.writeBuffer(uniform_buffer_, 0, &param, sizeof(CameraParam));

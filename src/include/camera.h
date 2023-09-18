@@ -2,7 +2,6 @@
 
 #include "utils/wgpu_util.h"
 #include "utils/util.h"
-#include "utils/vec3.h"
 
 class Camera {
 public:
@@ -27,7 +26,7 @@ public:
         uint32_t spp;
         uint32_t seed;
 
-        CameraParam(Vec3 origin, Vec3 target, float aspect, float fovy, uint32_t spp, uint32_t seed) :
+        CameraParam(vec3 origin, vec3 target, float aspect, float fovy, uint32_t spp, uint32_t seed) :
                 origin(origin), target(target), aspect(aspect), fovy(fovy), spp(spp), seed(seed) {}
     };
 

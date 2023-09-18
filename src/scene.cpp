@@ -45,7 +45,7 @@ void Scene::Release() {
 /*
  * Objファイルのロード
  */
-void Scene::LoadObj(const char *file_path, Color3 color, Vec3 translation, bool emissive) {
+void Scene::LoadObj(const char *file_path, Color3 color, vec3 translation, bool emissive) {
   std::vector<Vertex> vertices;
   LoadVertices(file_path, vertices);
   for (size_t i = 0; i < vertices.size() / 3; ++i) {
@@ -110,8 +110,8 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
         }
 
         Vertex vert;
-        vert.point_ = Vec3(vx, vy, vz);
-        vert.normal_ = Vec3(nx, ny, nz);
+        vert.point_ = vec3(vx, vy, vz);
+        vert.normal_ = vec3(nx, ny, nz);
         vert.u_ = tx;
         vert.v_ = ty;
         vertices.push_back(vert);
@@ -175,19 +175,19 @@ Buffer Scene::CreateTriangleBuffer(Device &device) {
     tri_data[tri_offset++] = vertex[2];
     tri_data[tri_offset++] = dummy;
     /// ベクトルe1
-    const Vec3 e1 = tri.e1_;
+    const vec3 e1 = tri.e1_;
     tri_data[tri_offset++] = e1[0];
     tri_data[tri_offset++] = e1[1];
     tri_data[tri_offset++] = e1[2];
     tri_data[tri_offset++] = dummy;
     /// ベクトルe2
-    const Vec3 e2 = tri.e2_;
+    const vec3 e2 = tri.e2_;
     tri_data[tri_offset++] = e2[0];
     tri_data[tri_offset++] = e2[1];
     tri_data[tri_offset++] = e2[2];
     tri_data[tri_offset++] = dummy;
     /// 面法線
-    const Vec3 face_norm = tri.face_norm_;
+    const vec3 face_norm = tri.face_norm_;
     tri_data[tri_offset++] = face_norm[0];
     tri_data[tri_offset++] = face_norm[1];
     tri_data[tri_offset++] = face_norm[2];

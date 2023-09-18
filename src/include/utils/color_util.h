@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vec3.h"
+#include "util.h"
 
 static const auto COL_RED = Color3(.65, .05, .05);
 static const auto COL_GREEN = Color3(.12, .45, .15);

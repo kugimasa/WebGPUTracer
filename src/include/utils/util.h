@@ -89,3 +89,6 @@ inline float EaseInOutExpo(float t) {
 inline float Sigmoid(float t) {
   return 3.0f * t * t - 2.0f * t * t * t;
 }
+
+using Point3 = vec3; // Position
+using Color3 = vec3; // Color

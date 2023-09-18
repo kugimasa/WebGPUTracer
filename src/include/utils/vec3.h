@@ -1,11 +1,12 @@
 // Using the code of Ray Tracing in One Weekend
 // https://raytracing.github.io/books/RayTracingInOneWeekend.html
+////// NOT USED //////
+// Using glm instead
 #pragma once
 
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
-#include "util.h"
 
 class Vec3 {
 public:
@@ -146,7 +147,7 @@ inline Vec3 Unit(Vec3 v) {
   return v / v.Length();
 }
 
-using Point3 = Vec3;   // 位置座標
-using Color3 = Vec3;    // カラー
+using Point3 = Vec3;   // Position
+using Color3 = Vec3;    // Color
 
 static const Vec3 ZERO_Vec3(0.0, 0.0, 0.0);

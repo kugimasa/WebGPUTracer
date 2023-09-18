@@ -21,7 +21,7 @@ public:
     void Release();
 
 private:
-    void LoadObj(const char *file_path, Color3 color, Vec3 translation = ZERO_Vec3, bool emissive = false);
+    void LoadObj(const char *file_path, Color3 color, vec3 translation = vec3(0, 0, 0), bool emissive = false);
 
     void LoadVertices(const char *file_path, std::vector<Vertex> &vertices);
 

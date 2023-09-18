@@ -1,20 +1,20 @@
 #pragma once
 
-#include "utils/vec3.h"
+#include "utils/util.h"
 
 class Vertex {
 public:
     Vertex() = default;
 
-    explicit Vertex(Vec3 point, Vec3 normal, float u, float v) :
+    explicit Vertex(vec3 point, vec3 normal, float u, float v) :
             point_(point),
             normal_(normal),
             u_(u), v_(v) {}
 
-    Vertex Translate(Vec3 translation);
+    Vertex Translate(vec3 translation);
 
 public:
-    Vec3 point_;
-    Vec3 normal_;
+    vec3 point_;
+    vec3 normal_;
     float u_, v_;
 };

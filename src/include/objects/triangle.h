@@ -1,6 +1,5 @@
 #pragma once
 
-#include "utils/vec3.h"
 #include "objects/vertex.h"
 
 class Triangle {
@@ -11,7 +10,7 @@ public:
 
 public:
     Vertex vertex_[3];
-    Vec3 face_norm_, e1_, e2_;
+    vec3 face_norm_, e1_, e2_;
     Color3 color_;
     bool emissive_;
 };

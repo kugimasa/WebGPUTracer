@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utils/vec3.h"
+#include "utils/util.h"
 
 class Sphere {
 public:
