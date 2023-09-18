@@ -26,6 +26,7 @@ add_executable(WebGPUTracer
                external/implementation.cpp)
 
 include_directories(src/include)
+include_directories(glm)
 include_directories("external/stb")
 include_directories("external/tinyobjloader")
 
