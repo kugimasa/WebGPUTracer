@@ -43,7 +43,7 @@ private:
     static const uint32_t WIDTH = 512;
     static const uint32_t HEIGHT = 512;
     static const uint32_t MAX_FRAME = 1;
-    static const uint32_t SPP = 64;
+    static const uint32_t SPP = 550;
     Camera camera_{};
     Scene scene_{};
     bool hasWindow_ = false;

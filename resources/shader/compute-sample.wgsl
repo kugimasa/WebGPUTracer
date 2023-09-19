@@ -70,11 +70,11 @@ fn fabs(x: f32) -> f32 {
 }
 
 fn point_at(r: Ray, t: f32) -> vec3f {
-  return r.start.xyz + t * r.dir.xyz;
+  return r.start + t * r.dir;
 }
 
 fn face_norm(r: Ray, norm: vec3f) -> vec3f {
-  return select(-norm, norm, dot(r.dir.xyz, norm.xyz) < 0.0);
+  return select(-norm, norm, dot(r.dir, norm.xyz) < 0.0);
 }
 
 fn sphere_uv(norm: vec3f) -> vec2f {
@@ -144,7 +144,12 @@ fn onb_local(onb: ONB, a: vec3f) -> vec3f {
 }
 
 fn sample_direction(hit: HitInfo) -> vec3f {
-    return sample_from_light(hit);
+    if (rand() > 0.5) {
+      return sample_from_bxdf(hit);
+    }
+    else {
+      return sample_from_light(hit);
+    }
 }
 
 fn sample_from_sphere(sphere: Sphere, pos: vec3f) -> vec3f {
@@ -182,6 +187,10 @@ fn sample_from_cosine(hit: HitInfo) -> vec3f {
   return onb_local(onb, a);
 }
 
+fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
+  return 0.5 * cosine_pdf(hit, normalize(dir)) + 0.5 * light_area_pdf(hit, dir);
+}
+
 fn sphere_pdf(hit: HitInfo, sphere: Sphere, dir: vec3f) -> f32 {
   let squared_dist = dot(sphere.center - hit.pos, sphere.center - hit.pos);
   let cos_theta_max = sqrt(1.0 - sphere.radius * sphere.radius / squared_dist);
@@ -189,8 +198,32 @@ fn sphere_pdf(hit: HitInfo, sphere: Sphere, dir: vec3f) -> f32 {
   return 1.0 / solid_angle;
 }
 
-fn light_area_pdf(dir: vec3f) -> f32 {
-  // FIXME: Fixed light area
+fn light_area_pdf(hit: HitInfo, dir: vec3f) -> f32 {
+  var rec = HitInfo();
+  rec.dist = kRayMax;
+  rec.shape = kNoHit;
+  rec.emissive = false;
+  rec.front_face = false;
+  rec.col = kZero;
+  var idx = kNoHit;
+  // FIXME: origin of the ray is wrong ... ?
+  var r = Ray(hit.pos, normalize(dir));
+  for (var quad = 0u; quad < arrayLength(&quads); quad++) {
+    rec = intersect_quad(r, quad, rec);
+    if (rec.emissive) {
+      idx = quad;
+    }
+  }
+  if (idx == kNoHit || rec.dist == kRayMax) {
+    return 0.0;
+  }
+  // MEMO: Calculate from hit
+  // let to_light = normalize(dir);
+  // let n = cross(quads[idx].right.xyz, quads[idx].up.xyz);
+  // let distance_squared = rec.dist * rec.dist * length(to_light) * length(to_light);
+  // let light_cosine = fabs(dot(to_light, rec.norm) / length(to_light));
+  // return distance_squared / (light_cosine * length(n));
+  // MEMO: Calculating light area light directly
   let light_area = 130.0 * 105.0;
   let distance_squared = length(dir) * length(dir);
   let light_cosine = fabs(normalize(dir).y) + kRayMin;
@@ -266,7 +299,11 @@ fn raytrace(path: Path, depth: i32) -> Path {
   else {
     // Reflection
     var scatter_dir = sample_direction(hit);
-    let pdf_val = light_area_pdf(scatter_dir);
+    let pdf_val = mixture_pdf(hit, scatter_dir);
+    // let scatter_dir = sample_from_bxdf(hit);
+    // let pdf_val = cosine_pdf(hit, scatter_dir);
+//    var scatter_dir = sample_from_light(hit);
+//    let pdf_val = light_area_pdf(hit, scatter_dir);
     scatter_dir = normalize(scatter_dir);
     // Update path
     let scattered_ray = Ray(hit.pos, scatter_dir);
@@ -296,16 +333,16 @@ fn sample_hit(r: Ray) -> HitInfo {
 /// https://raytracing.github.io/books/RayTracingTheNextWeek.html#quadrilaterals/interiortestingoftheintersectionusinguvcoordinates
 fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   let quad = quads[id];
-  let denom = dot(quad.norm.xyz, r.dir.xyz);
+  let denom = dot(quad.norm.xyz, r.dir);
   if (fabs(denom) < kRayMin) {
     return closest;
   }
-  let t = (quad.d - dot(quad.norm.xyz, r.start.xyz)) / denom;
+  let t = (quad.d - dot(quad.norm.xyz, r.start)) / denom;
   if (t < kRayMin || kRayMax < t) {
     return closest;
   }
   let pos = point_at(r, t);
-  let ray_dist = distance(pos, r.start.xyz);
+  let ray_dist = distance(pos, r.start);
   if (ray_dist >= closest.dist) {
     return closest;
   }
@@ -315,15 +352,15 @@ fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
   if ((a < 0.0) || (1.0 < a) || (b < 0.0) || (1.0 < b)) {
     return closest;
   }
-  let front_face = dot(r.dir.xyz, quad.norm.xyz) < 0.0;
+  let front_face = dot(r.dir, quad.norm.xyz) < 0.0;
   let norm = select(-quad.norm.xyz, quad.norm.xyz, front_face);
   let uv = vec2f(a, b);
   return HitInfo(ray_dist, bool(quad.emissive > 0.0f), front_face, 1u, pos, norm, uv, quad.col);
 }
 
 fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
-  let oc = r.start.xyz - sphere.center;
-  let dir = r.dir.xyz;
+  let oc = r.start - sphere.center;
+  let dir = r.dir;
   let a = dot(dir, dir);
   let half_b = dot(oc, dir);
   let c = dot(oc, oc) - sphere.radius * sphere.radius;
@@ -341,12 +378,12 @@ fn intersect_sphere(r: Ray, sphere: Sphere, closest: HitInfo) -> HitInfo {
     }
   }
   let pos = point_at(r, root);
-  let ray_dist = distance(pos, r.start.xyz);
+  let ray_dist = distance(pos, r.start);
   if (ray_dist >= closest.dist) {
     return closest;
   }
   let sphere_norm = (pos - sphere.center) / sphere.radius;
-  let front_face = dot(r.dir.xyz, sphere_norm) < 0.0;
+  let front_face = dot(r.dir, sphere_norm) < 0.0;
   let norm = select(-sphere_norm, sphere_norm, front_face);
   let uv = sphere_uv(norm);
   return HitInfo(ray_dist, bool(sphere.emissive > 0.0f), front_face, 2u, pos, norm, uv, sphere.col);
