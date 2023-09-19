@@ -189,7 +189,7 @@ fn sample_from_cosine(hit: HitInfo) -> vec3f {
 }
 
 fn mixture_pdf(hit: HitInfo, dir: vec3f) -> f32 {
-  return 0.5 * cosine_pdf(hit, normalize(dir)) + 0.5 * light_area_pdf(hit, dir);
+  return 0.5 * cosine_pdf(hit, dir) + 0.5 * light_area_pdf(hit, dir);
 }
 
 fn sphere_pdf(hit: HitInfo, sphere: Sphere, dir: vec3f) -> f32 {
