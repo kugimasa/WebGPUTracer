@@ -277,7 +277,7 @@ void Renderer::InitComputePipeline() {
   Print(PrintInfoType::WebGPU, "Creating compute pipeline ...");
   /// Shader source
   Print(PrintInfoType::WebGPU, "Creating shader module ...");
-  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/compute-sample.wgsl", device_);
+  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/path_tracer.wgsl", device_);
   Print(PrintInfoType::WebGPU, "Shader module: ", shader_module);
 
   /// Create a pipeline layout

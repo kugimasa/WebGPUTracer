@@ -31,7 +31,7 @@ private:
 
     Buffer CreateTriangleBuffer(Device &device);
 
-    Buffer CreateQuadBuffer(Device &device);
+    Buffer CreateQuadBuffer(Device &device, std::vector<Quad> &quads, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation) const;
 
     Buffer CreateSphereBuffer(Device &device, size_t num, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation);
 
@@ -39,6 +39,7 @@ private:
 
 public:
     std::vector<Triangle> tris_;
+    std::vector<Quad> lights_;
     std::vector<Quad> quads_;
     std::vector<Sphere> spheres_;
     uint32_t tri_stride_ = 20 * 4;
@@ -46,6 +47,7 @@ public:
     uint32_t sphere_stride_ = 8 * 4;
     Buffer tri_buffer_ = nullptr;
     Buffer quad_buffer_ = nullptr;
+    Buffer light_buffer_ = nullptr;
     Buffer sphere_buffer_ = nullptr;
     Objects objects_ = {};
 };

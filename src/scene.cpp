@@ -12,6 +12,8 @@
  * コンストラクタ
  */
 Scene::Scene(Device &device) {
+  /// Add Light
+  lights_.emplace_back(Point3(213, 554, 227), vec3(130, 0, 0), vec3(0, 0, 105), COL_LIGHT, true);
   /// Add CornellBox
   auto cb = CornellBox();
   cb.PushToQuads(quads_);
@@ -38,6 +40,8 @@ Scene::Scene(Device &device) {
  */
 void Scene::Release() {
   objects_.bind_group_.release();
+  light_buffer_.destroy();
+  light_buffer_.release();
   quad_buffer_.destroy();
   quad_buffer_.release();
   sphere_buffer_.destroy();
@@ -130,15 +134,19 @@ void Scene::LoadVertices(const char *file_path, std::vector<Vertex> &vertices) {
  * BindGroupLayoutの初期化
  */
 void Scene::InitBindGroupLayout(Device &device) {
-  std::vector<BindGroupLayoutEntry> bindings(2, Default);
-  /// Scene: Quads
+  std::vector<BindGroupLayoutEntry> bindings(3, Default);
+  /// Scene: Lights
   bindings[0].binding = 0;
   bindings[0].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[0].visibility = ShaderStage::Compute;
-  /// Scene: Spheres
+  /// Scene: Quads
   bindings[1].binding = 1;
   bindings[1].buffer.type = BufferBindingType::ReadOnlyStorage;
   bindings[1].visibility = ShaderStage::Compute;
+  /// Scene: Spheres
+  bindings[2].binding = 2;
+  bindings[2].buffer.type = BufferBindingType::ReadOnlyStorage;
+  bindings[2].visibility = ShaderStage::Compute;
   /// BindGroupLayoutの作成
   BindGroupLayoutDescriptor bind_group_layout_desc{};
   bind_group_layout_desc.entryCount = (uint32_t) bindings.size();
@@ -151,7 +159,8 @@ void Scene::InitBindGroupLayout(Device &device) {
  * Buffer作成
  */
 void Scene::InitBuffers(Device &device) {
-  quad_buffer_ = CreateQuadBuffer(device);
+  light_buffer_ = CreateQuadBuffer(device, lights_, BufferUsage::Storage, true);
+  quad_buffer_ = CreateQuadBuffer(device, quads_, BufferUsage::Storage, true);
   sphere_buffer_ = CreateSphereBuffer(device, spheres_.size(), BufferUsage::Storage, true);
 }
 
@@ -211,20 +220,19 @@ Buffer Scene::CreateTriangleBuffer(Device &device) {
 /*
  * QuadBufferの作成
  */
-Buffer Scene::CreateQuadBuffer(Device &device) {
+Buffer Scene::CreateQuadBuffer(Device &device, std::vector<Quad> &quads, WGPUBufferUsageFlags usage_flags, bool mapped_at_creation) const {
   BufferDescriptor quad_buffer_desc{};
-  auto quad_buffer_size = quad_stride_ * quads_.size();
+  auto quad_buffer_size = quad_stride_ * quads.size();
   quad_buffer_desc.size = quad_buffer_size;
-  quad_buffer_desc.usage = BufferUsage::Storage;
-  quad_buffer_desc.mappedAtCreation = true;
+  quad_buffer_desc.usage = usage_flags;
+  quad_buffer_desc.mappedAtCreation = mapped_at_creation;
   Buffer quad_buffer = device.createBuffer(quad_buffer_desc);
   const uint32_t offset = 0;
   const uint32_t size = 0;
   auto *quad_data = (float *) quad_buffer.getConstMappedRange(offset, size);
   uint32_t quad_offset = 0;
   const float dummy = 1.0f;
-  for (int idx = 0; idx < (int) quads_.size(); ++idx) {
-    Quad quad = quads_[idx];
+  for (auto quad: quads) {
     /// 位置
     quad_data[quad_offset++] = quad.q_[0];
     quad_data[quad_offset++] = quad.q_[1];
@@ -302,17 +310,22 @@ Buffer Scene::CreateSphereBuffer(Device &device, size_t num, WGPUBufferUsageFlag
  */
 void Scene::InitBindGroup(Device &device) {
   /// BindGroup を作成
-  std::vector<BindGroupEntry> entries(2, Default);
-  /// QuadBuffer
+  std::vector<BindGroupEntry> entries(3, Default);
+  /// LightBuffer
   entries[0].binding = 0;
-  entries[0].buffer = quad_buffer_;
+  entries[0].buffer = light_buffer_;
   entries[0].offset = 0;
-  entries[0].size = quad_stride_ * quads_.size();
-  /// SphereBuffer
+  entries[0].size = quad_stride_ * lights_.size();
+  /// QuadBuffer
   entries[1].binding = 1;
-  entries[1].buffer = sphere_buffer_;
+  entries[1].buffer = quad_buffer_;
   entries[1].offset = 0;
-  entries[1].size = sphere_stride_ * spheres_.size();
+  entries[1].size = quad_stride_ * quads_.size();
+  /// SphereBuffer
+  entries[2].binding = 2;
+  entries[2].buffer = sphere_buffer_;
+  entries[2].offset = 0;
+  entries[2].size = sphere_stride_ * spheres_.size();
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = objects_.bind_group_layout_;
   bind_group_desc.entryCount = (uint32_t) entries.size();

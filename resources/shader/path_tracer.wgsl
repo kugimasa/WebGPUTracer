@@ -3,7 +3,7 @@ const k_1_PI = 0.318309886184;
 const kNoHit = 0xffffffffu;
 const kXup = vec3f(1.0, 0.0, 0.0);
 const kYup = vec3f(0.0, 1.0, 0.0);
-const kRayDepth = 10;
+const kRayDepth = 50;
 const kRayMin = 0.001;
 const kRayMax = 1e20;
 const kZero = vec3f(0.0, 0.0, 0.0);
@@ -148,6 +148,7 @@ fn sample_direction(hit: HitInfo) -> vec3f {
       return sample_from_bxdf(hit);
     }
     else {
+      // Not normalized
       return sample_from_light(hit);
     }
 }
@@ -160,10 +161,10 @@ fn sample_from_sphere(sphere: Sphere, pos: vec3f) -> vec3f {
 }
 
 fn sample_from_light(hit: HitInfo) -> vec3f {
-  // FIXME: Sampling from rect light directly
-  let on_light = vec3(rand() * 130.0 + 213.0, 554.0, rand() * 105.0 + 227.0);
-  var to_light = on_light - hit.pos;
-  return to_light;
+  // Only one light
+  let light = lights[0u];
+  let p = light.pos.xyz + (rand() * light.right.xyz) + (rand() * light.up.xyz);
+  return p - hit.pos;
 }
 
 fn sample_from_bxdf(hit: HitInfo) -> vec3f {
@@ -198,36 +199,13 @@ fn sphere_pdf(hit: HitInfo, sphere: Sphere, dir: vec3f) -> f32 {
   return 1.0 / solid_angle;
 }
 
-fn light_area_pdf(hit: HitInfo, dir: vec3f) -> f32 {
-  var rec = HitInfo();
-  rec.dist = kRayMax;
-  rec.shape = kNoHit;
-  rec.emissive = false;
-  rec.front_face = false;
-  rec.col = kZero;
-  var idx = kNoHit;
-  // FIXME: origin of the ray is wrong ... ?
-  var r = Ray(hit.pos, normalize(dir));
-  for (var quad = 0u; quad < arrayLength(&quads); quad++) {
-    rec = intersect_quad(r, quad, rec);
-    if (rec.emissive) {
-      idx = quad;
-    }
-  }
-  if (idx == kNoHit || rec.dist == kRayMax) {
-    return 0.0;
-  }
-  // MEMO: Calculate from hit
-  // let to_light = normalize(dir);
-  // let n = cross(quads[idx].right.xyz, quads[idx].up.xyz);
-  // let distance_squared = rec.dist * rec.dist * length(to_light) * length(to_light);
-  // let light_cosine = fabs(dot(to_light, rec.norm) / length(to_light));
-  // return distance_squared / (light_cosine * length(n));
-  // MEMO: Calculating light area light directly
-  let light_area = 130.0 * 105.0;
-  let distance_squared = length(dir) * length(dir);
-  let light_cosine = fabs(normalize(dir).y) + kRayMin;
-  return distance_squared / (light_cosine * light_area);
+fn light_area_pdf(hit: HitInfo, to_light: vec3f) -> f32 {
+  // Only one light
+  let light = lights[0u];
+  let area = length(cross(light.right.xyz, light.up.xyz));
+  let distance_squared = length(to_light) * length(to_light);
+  let light_cosine = fabs(normalize(to_light).y) + kRayMin;
+  return distance_squared / (light_cosine * area);
 }
 
 fn cosine_pdf(hit: HitInfo, dir: vec3f) -> f32 {
@@ -247,8 +225,9 @@ fn schlick_fresnel(col: vec3f, cos: f32) -> vec3f {
 }
 
 @group(0) @binding(0) var<uniform> camera : CameraParam;
-@group(1) @binding(0) var<storage> quads : array<Quad>;
-@group(1) @binding(1) var<storage> spheres : array<Sphere>;
+@group(1) @binding(0) var<storage> lights : array<Quad>;
+@group(1) @binding(1) var<storage> quads : array<Quad>;
+@group(1) @binding(2) var<storage> spheres : array<Sphere>;
 
 fn pixel_sample_square(offset: vec2f, u: vec3f, v: vec3f) -> vec3f {
     let recip_sqrt_spp = 1.0 / sqrt(f32(camera.spp));
@@ -285,9 +264,8 @@ fn setup_camera_ray(pos: vec2f, offset: vec2f, screen_size: vec2f) -> Ray {
 fn raytrace(path: Path, depth: i32) -> Path {
   let r = path.ray;
   let hit = sample_hit(r);
-  let emissive = hit.emissive;
   // If light end trace
-  if (emissive) {
+  if (hit.emissive) {
     if (depth == 0) {
       return Path(r, hit.col, true);
     }
@@ -298,12 +276,9 @@ fn raytrace(path: Path, depth: i32) -> Path {
   // Non-light object
   else {
     // Reflection
+    // MIS(Light & LambertBRDF)
     var scatter_dir = sample_direction(hit);
     let pdf_val = mixture_pdf(hit, scatter_dir);
-    // let scatter_dir = sample_from_bxdf(hit);
-    // let pdf_val = cosine_pdf(hit, scatter_dir);
-//    var scatter_dir = sample_from_light(hit);
-//    let pdf_val = light_area_pdf(hit, scatter_dir);
     scatter_dir = normalize(scatter_dir);
     // Update path
     let scattered_ray = Ray(hit.pos, scatter_dir);
@@ -319,7 +294,12 @@ fn sample_hit(r: Ray) -> HitInfo {
   hit.emissive = false;
   hit.front_face = false;
   hit.col = kZero;
-  for (var quad = 0u; quad < arrayLength(&quads); quad++) {
+  for (var idx = 0u; idx < arrayLength(&lights); idx++) {
+    let light = lights[idx];
+    hit = intersect_quad(r, light, hit);
+  }
+  for (var idx = 0u; idx < arrayLength(&quads); idx++) {
+    let quad = quads[idx];
     hit = intersect_quad(r, quad, hit);
   }
   for (var idx = 0u; idx < arrayLength(&spheres); idx++) {
@@ -331,8 +311,7 @@ fn sample_hit(r: Ray) -> HitInfo {
 
 /// quad form RayTracingTheNextWeek
 /// https://raytracing.github.io/books/RayTracingTheNextWeek.html#quadrilaterals/interiortestingoftheintersectionusinguvcoordinates
-fn intersect_quad(r: Ray, id: u32, closest: HitInfo) -> HitInfo {
-  let quad = quads[id];
+fn intersect_quad(r: Ray, quad: Quad, closest: HitInfo) -> HitInfo {
   let denom = dot(quad.norm.xyz, r.dir);
   if (fabs(denom) < kRayMin) {
     return closest;
