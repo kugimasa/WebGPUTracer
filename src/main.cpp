@@ -3,7 +3,8 @@
 int main(int argc, char *argv[]) {
   Print(PrintInfoType::WebGPUTracer, "Starting WebGPUTracer (_)=---=(_)");
   Renderer renderer;
-  bool hasWindow = false;
+  bool hasWindow = true;
+  bool isCompute = false;
   renderer.OnInit(hasWindow);
 
   // RenderPipeline
@@ -24,10 +25,12 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // ComputePipeline
-  if (!renderer.OnCompute(start_frame, end_frame)) {
-    Error(PrintInfoType::WebGPUTracer, "(_)=--.. Something went wrong");
-    return 1;
+  if (isCompute) {
+    // ComputePipeline
+    if (!renderer.OnCompute(start_frame, end_frame)) {
+      Error(PrintInfoType::WebGPUTracer, "(_)=--.. Something went wrong");
+      return 1;
+    }
   }
 
   renderer.OnFinish();

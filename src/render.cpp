@@ -24,10 +24,10 @@ bool Renderer::OnInit(bool hasWindow) {
   if (!InitDevice()) return false;
   InitTexture();
   InitTextureViews();
-  // InitSwapChain();
+  if (hasWindow_) InitSwapChain();
   InitBindGroupLayout();
-  InitComputePipeline();
-  // InitRenderPipeline();
+  // InitComputePipeline();
+  InitRenderPipeline();
   InitBuffers();
   InitBindGroup();
   return true;
@@ -167,8 +167,8 @@ void Renderer::InitTextureViews() {
 void Renderer::InitSwapChain() {
   SwapChainDescriptor swap_chain_desc = {};
   swap_chain_desc.nextInChain = nullptr;
-  swap_chain_desc.width = 640;
-  swap_chain_desc.height = 480;
+  swap_chain_desc.width = WIDTH;
+  swap_chain_desc.height = HEIGHT;
   /// Texture format
 #ifdef WEBGPU_BACKEND_WGPU
   swap_chain_format_ = surface_.getPreferredFormat(adapter_);
