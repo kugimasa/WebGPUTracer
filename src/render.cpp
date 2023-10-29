@@ -2,6 +2,9 @@
 #include "camera.h"
 #include "utils/save_texture.h"
 #include "utils/util.h"
+#include <imgui.h>
+#include <backends/imgui_impl_wgpu.h>
+#include <backends/imgui_impl_glfw.h>
 
 /// \brief Initialize function
 /// \param hasWindow Uses window by glfw if true
@@ -496,26 +499,26 @@ void Renderer::OnFinish() {
   /// WebGPU stuff
   /// Release WebGPU bind group
   bind_group_.release();
+  /// Release WebGPU buffer
+  input_buffer_.destroy();
+  input_buffer_.release();
+  /// Release WebGPU pipelines
+  render_pipeline_.release();
+  // compute_pipeline_.release();
+  pipeline_layout_.release();
+  /// Release WebGPU bind group layout
+  bind_group_layout_.release();
+  /// Release WebGPU swap chain
+  swap_chain_.release();
   /// Release WebGPU texture views
   output_texture_view_.release();
   /// Release WebGPU texture
   texture_.destroy();
   texture_.release();
-  /// Release WebGPU buffer
-  input_buffer_.destroy();
-  input_buffer_.release();
-  /// Release WebGPU pipelines
-  // render_pipeline_.release();
-  compute_pipeline_.release();
-  pipeline_layout_.release();
-  /// Release WebGPU bind group layout
-  bind_group_layout_.release();
-  /// Release WebGPU swap chain
-  // swap_chain_.release();
   /// Release WebGPU device
   device_.release();
   /// Release WebGPU surface
-  // surface_.release();
+  surface_.release();
   /// Release WebGPU adapter
   adapter_.release();
   /// Release WebGPU instance
@@ -534,4 +537,62 @@ void Renderer::OnFinish() {
 /// \return Running or not
 bool Renderer::IsRunning() {
   return !glfwWindowShouldClose(window_);
+}
+
+/// \brief Setup Dear ImGui
+/// \return
+bool Renderer::InitGui() {
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGui::GetIO();
+
+  // Setup Platform/Renderer backends
+  ImGui_ImplGlfw_InitForOther(window_, true);
+  ImGui_ImplWGPU_Init(device_, 3, swap_chain_format_, depth_texture_format_);
+
+  return true;
+}
+
+void Renderer::TerminateGui() {
+  ImGui_ImplGlfw_Shutdown();
+  ImGui_ImplWGPU_Shutdown();
+}
+
+void Renderer::UpdateGui(RenderPassEncoder render_pass) {
+  // TODO: Just a sample
+  // Start Dear ImGui frame
+  ImGui_ImplWGPU_NewFrame();
+  ImGui_ImplGlfw_NewFrame();
+  ImGui::NewFrame();
+
+  // Build UI
+  // Build our UI
+  static float f = 0.0f;
+  static int counter = 0;
+  static bool show_demo_window = true;
+  static bool show_another_window = false;
+  static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+  ImGui::Begin("Hello, world!");
+
+  ImGui::Text("This is some useful text.");
+  ImGui::Checkbox("Demo Window", &show_demo_window);
+  ImGui::Checkbox("Another Window", &show_another_window);
+
+  ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+  ImGui::ColorEdit3("clear color", (float *) &clear_color);
+
+  if (ImGui::Button("Button"))
+    counter++;
+  ImGui::SameLine();
+  ImGui::Text("counter = %d", counter);
+
+  ImGuiIO &io = ImGui::GetIO();
+  ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+  ImGui::End();
+
+  // Draw UI
+  ImGui::EndFrame();
+  ImGui::Render();
+  ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), render_pass);
 }

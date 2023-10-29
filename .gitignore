@@ -180,6 +180,7 @@ Temporary Items
 glfw/
 glfw3webgpu/
 glm/
+imgui/
 webgpu/
 
 # Obj files

@@ -12,6 +12,7 @@ option(DEV_MODE "Set up development helper settings" ON)
 add_subdirectory(glfw)
 add_subdirectory(glfw3webgpu)
 add_subdirectory(webgpu)
+add_subdirectory(imgui)
 
 add_executable(WebGPUTracer
                src/main.cpp
@@ -41,7 +42,7 @@ else ()
                                )
 endif ()
 
-target_link_libraries(WebGPUTracer PRIVATE glfw webgpu glfw3webgpu)
+target_link_libraries(WebGPUTracer PRIVATE glfw webgpu glfw3webgpu imgui)
 
 set_target_properties(WebGPUTracer PROPERTIES
                       CXX_STANDARD 17
