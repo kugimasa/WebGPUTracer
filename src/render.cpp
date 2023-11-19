@@ -21,18 +21,26 @@ bool Renderer::OnInit(bool hasWindow) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
     window_ = glfwCreateWindow(WIDTH, HEIGHT, "WebGPUTracer (_)=---=(_)", NULL, NULL);
+    if (!window_) {
+      Error(PrintInfoType::GLFW, "Could not open window!");
+      return false;
+    }
   }
 
-  buffer_size_ = 64 * sizeof(float);   // seed
   if (!InitDevice()) return false;
-  InitTexture();
-  InitTextureViews();
-  if (hasWindow_) InitSwapChain();
-  InitBindGroupLayout();
+  // InitTexture();
+  // InitTextureViews();
+  if (hasWindow_) {
+    InitSwapChain();
+    InitRenderPipeline();
+    InitDepthBuffer();
+    InitDepthTextureView();
+  }
   // InitComputePipeline();
-  InitRenderPipeline();
   InitBuffers();
   InitBindGroup();
+  /// TODO: Gui
+  // if (!InitGui()) return false;
   return true;
 }
 
@@ -70,31 +78,35 @@ bool Renderer::InitDevice() {
   Print(PrintInfoType::WebGPU, "Requesting device ...");
   // Setting up required limits
   RequiredLimits requiredLimits = Default;
-  requiredLimits.limits.maxBindGroups = 3;
-  requiredLimits.limits.maxUniformBuffersPerShaderStage = 2;
-  requiredLimits.limits.maxUniformBufferBindingSize = sizeof(Camera::CameraParam);
   // Without this, wgpu-native crashes
-  requiredLimits.limits.maxVertexAttributes = 3;
-  requiredLimits.limits.maxVertexBufferArrayStride = 10 * sizeof(float);
-  requiredLimits.limits.maxVertexBuffers = 3;
-  requiredLimits.limits.maxBufferSize = WIDTH * HEIGHT * sizeof(float);
-  requiredLimits.limits.maxTextureDimension1D = 4096;
-  requiredLimits.limits.maxTextureDimension2D = 4096;
+  requiredLimits.limits.maxVertexAttributes = 2;
+  requiredLimits.limits.maxVertexBuffers = 1;
+  requiredLimits.limits.maxBufferSize = 15 * 5 * sizeof(float);
+  requiredLimits.limits.maxVertexBufferArrayStride = 6 * sizeof(float);
+  // This must be set even if we do not use storage buffers for now
+  requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
+  // This must be set even if we do not use uniform buffers for now
+  requiredLimits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
+  // Number of components transiting from vertex to fragment shader
+  requiredLimits.limits.maxInterStageShaderComponents = 3;
+  requiredLimits.limits.maxBindGroups = 1;
+  requiredLimits.limits.maxUniformBuffersPerShaderStage = 1;
+  requiredLimits.limits.maxUniformBufferBindingSize = 16 * 4;
+  // For the depth buffer, we enable texture
+  requiredLimits.limits.maxTextureDimension1D = WIDTH;
+  requiredLimits.limits.maxTextureDimension2D = HEIGHT;
   // Cannot be 4096 on local macOS (wgpu-native)
   requiredLimits.limits.maxTextureDimension3D = 2048;
   requiredLimits.limits.maxTextureArrayLayers = 1;
   requiredLimits.limits.maxStorageBuffersPerShaderStage = 3;
   requiredLimits.limits.maxStorageBufferBindingSize = WIDTH * HEIGHT * sizeof(float);;
   requiredLimits.limits.maxStorageTexturesPerShaderStage = 1;
-  requiredLimits.limits.maxComputeWorkgroupSizeX = 32;
-  requiredLimits.limits.maxComputeWorkgroupSizeY = 32;
-  requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
-  requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 256;
-  requiredLimits.limits.maxComputeWorkgroupsPerDimension = 32;
-  // This must be set even if we do not use storage buffers for now
-  requiredLimits.limits.minStorageBufferOffsetAlignment = supported_limits.limits.minStorageBufferOffsetAlignment;
-  // This must be set even if we do not use uniform buffers for now
-  requiredLimits.limits.minUniformBufferOffsetAlignment = supported_limits.limits.minUniformBufferOffsetAlignment;
+  // For Compute Pipeline
+  // requiredLimits.limits.maxComputeWorkgroupSizeX = 32;
+  // requiredLimits.limits.maxComputeWorkgroupSizeY = 32;
+  // requiredLimits.limits.maxComputeWorkgroupSizeZ = 1;
+  // requiredLimits.limits.maxComputeInvocationsPerWorkgroup = 256;
+  // requiredLimits.limits.maxComputeWorkgroupsPerDimension = 32;
   // Minimal descriptor setting
   DeviceDescriptor device_desc = {};
   device_desc.label = "WebGPUTracer Device";
@@ -120,10 +132,11 @@ bool Renderer::InitDevice() {
   }, nullptr);
 #endif
 
+  // TODO: Leave this for Compute Pipeline
   /// Initialize Camera
-  camera_ = Camera(device_, SPP);
+  // camera_ = Camera(device_, SPP);
   /// Initialize Scene
-  scene_ = Scene(device_);
+  // scene_ = Scene(device_);
 
   /// Get device queue
   queue_ = device_.getQueue();
@@ -186,28 +199,56 @@ void Renderer::InitSwapChain() {
   Print(PrintInfoType::WebGPU, "Swapchain: ", swap_chain_);
 }
 
+/// \brief WebGPU Depth Buffer setup
+void Renderer::InitDepthBuffer() {
+  Print(PrintInfoType::WebGPU, "Creating depth texture ...");
+  // Create depth texture
+  TextureDescriptor depth_texture_desc;
+  depth_texture_desc.dimension = TextureDimension::_2D;
+  depth_texture_desc.format = depth_texture_format_;
+  depth_texture_desc.mipLevelCount = 1;
+  depth_texture_desc.sampleCount = 1;
+  depth_texture_desc.size = texture_size_;
+  depth_texture_desc.usage = TextureUsage::RenderAttachment;
+  depth_texture_desc.viewFormatCount = 1;
+  depth_texture_desc.viewFormats = (WGPUTextureFormat *) &depth_texture_format_;
+  depth_texture_ = device_.createTexture(depth_texture_desc);
+  Print(PrintInfoType::WebGPU, "Depth texture: ", depth_texture_);
+}
+
+/// \brief WebGPU Depth Texture View setup
+void Renderer::InitDepthTextureView() {
+  // Create the view of the depth texture manipulated by the rasterizer
+  Print(PrintInfoType::WebGPU, "Creating depth texture view");
+  TextureViewDescriptor depth_texture_view_desc;
+  depth_texture_view_desc.aspect = TextureAspect::DepthOnly;
+  depth_texture_view_desc.baseArrayLayer = 0;
+  depth_texture_view_desc.arrayLayerCount = 1;
+  depth_texture_view_desc.baseMipLevel = 0;
+  depth_texture_view_desc.mipLevelCount = 1;
+  depth_texture_view_desc.dimension = TextureViewDimension::_2D;
+  depth_texture_view_desc.format = depth_texture_format_;
+  depth_texture_view_ = depth_texture_.createView(depth_texture_view_desc);
+  Print(PrintInfoType::WebGPU, "Depth texture view: ", depth_texture_view_);
+}
+
 /// \brief WebGPU BindGroupLayout
 void Renderer::InitBindGroupLayout() {
   Print(PrintInfoType::WebGPU, "Create bind group layout ...");
-  std::vector<BindGroupLayoutEntry> bindings(2, Default);
+  BindGroupLayoutEntry binding_layout = Default;
 
   // Input buffer
-  bindings[0].binding = 0;
-  bindings[0].buffer.type = BufferBindingType::ReadOnlyStorage;
-  bindings[0].visibility = ShaderStage::Compute;
-
-  // Output buffer
-  bindings[1].binding = 1;
-  bindings[1].storageTexture.access = StorageTextureAccess::WriteOnly;
-  bindings[1].storageTexture.format = TextureFormat::RGBA8Unorm;
-  bindings[1].storageTexture.viewDimension = TextureViewDimension::_2D;
-  bindings[1].visibility = ShaderStage::Compute;
+  binding_layout.binding = 0;
+  binding_layout.visibility = ShaderStage::Vertex | ShaderStage::Fragment;
+  binding_layout.buffer.type = BufferBindingType::Uniform;
+  binding_layout.buffer.minBindingSize = sizeof(RenderParam);
 
   /// Create a bind group layout
   BindGroupLayoutDescriptor bind_group_layout_desc{};
-  bind_group_layout_desc.entryCount = (uint32_t) bindings.size();
-  bind_group_layout_desc.entries = bindings.data();
+  bind_group_layout_desc.entryCount = 1;
+  bind_group_layout_desc.entries = &binding_layout;
   bind_group_layout_ = device_.createBindGroupLayout(bind_group_layout_desc);
+  Print(PrintInfoType::WebGPU, "BindGroupLayout: ", bind_group_layout_);
 }
 
 /// \brief WebGPU RenderPipeline setup
@@ -215,14 +256,31 @@ void Renderer::InitRenderPipeline() {
   Print(PrintInfoType::WebGPU, "Creating render pipeline ...");
   /// Shader source
   Print(PrintInfoType::WebGPU, "Creating shader module ...");
-  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/triangle.wgsl", device_);
+  ShaderModule shader_module = LoadShaderModule(RESOURCE_DIR "/shader/shader.wgsl", device_);
   Print(PrintInfoType::WebGPU, "Shader module: ", shader_module);
   /// Render pipeline setup
   RenderPipelineDescriptor pipeline_desc;
+
+  // Vertex fetch
+  std::vector<VertexAttribute> vertex_attribs(2);
+  // Position
+  vertex_attribs[0].shaderLocation = 0;
+  vertex_attribs[0].format = VertexFormat::Float32x3;
+  vertex_attribs[0].offset = 0;
+  // Color
+  vertex_attribs[1].shaderLocation = 1;
+  vertex_attribs[1].format = VertexFormat::Float32x3;
+  vertex_attribs[1].offset = 3 * sizeof(float);
+
+  VertexBufferLayout vertex_buffer_layout;
+  vertex_buffer_layout.attributeCount = (uint32_t) vertex_attribs.size();
+  vertex_buffer_layout.attributes = vertex_attribs.data();
+  vertex_buffer_layout.arrayStride = 6 * sizeof(float);
+  vertex_buffer_layout.stepMode = VertexStepMode::Vertex;
+
   /// Vertex pipeline state
-  // Hard-code position for now
-  pipeline_desc.vertex.bufferCount = 0;
-  pipeline_desc.vertex.buffers = nullptr;
+  pipeline_desc.vertex.bufferCount = 1;
+  pipeline_desc.vertex.buffers = &vertex_buffer_layout;
   pipeline_desc.vertex.module = shader_module;
   pipeline_desc.vertex.entryPoint = "vs_main";
   pipeline_desc.vertex.constantCount = 0;
@@ -239,8 +297,6 @@ void Renderer::InitRenderPipeline() {
   fragment_state.constantCount = 0;
   fragment_state.constants = nullptr;
   pipeline_desc.fragment = &fragment_state;
-  /// Stencil/Depth
-  pipeline_desc.depthStencil = nullptr;
   /// Blending
   BlendState blend_state;
   blend_state.color.srcFactor = BlendFactor::SrcAlpha;
@@ -260,10 +316,20 @@ void Renderer::InitRenderPipeline() {
   color_target.writeMask = ColorWriteMask::All;
   fragment_state.targetCount = 1;
   fragment_state.targets = &color_target;
+  /// Stencil/Depth
+  DepthStencilState depth_stencil_state = Default;
+  depth_stencil_state.depthCompare = CompareFunction::Less;
+  depth_stencil_state.depthWriteEnabled = true;
+  depth_stencil_state.format = depth_texture_format_;
+  depth_stencil_state.stencilReadMask = 0;
+  depth_stencil_state.stencilWriteMask = 0;
+  pipeline_desc.depthStencil = &depth_stencil_state;
   /// Multi-sampling
   pipeline_desc.multisample.count = 1;
   pipeline_desc.multisample.mask = ~0u;
   pipeline_desc.multisample.alphaToCoverageEnabled = false;
+  /// Create bind group layout
+  InitBindGroupLayout();
   /// Create a pipeline layout
   PipelineLayoutDescriptor layout_desc{};
   layout_desc.bindGroupLayoutCount = 1;
@@ -309,39 +375,53 @@ void Renderer::InitComputePipeline() {
 
 /// \brief WebGPU Buffer setup
 void Renderer::InitBuffers() {
+  /// Load geometry
+  std::vector<float> point_data;
+  std::vector<uint16_t> index_data;
+  if (!LoadGeometry(RESOURCE_DIR "/geometry/txt/pyramid.txt", point_data, index_data, 3)) {
+    Error(PrintInfoType::WebGPUTracer, "Could not load geometry!");
+  }
+  vertex_buffer_size_ = point_data.size();
+  index_buffer_size_ = index_data.size();
+  uniform_buffer_size_ = sizeof(RenderParam);
   Print(PrintInfoType::WebGPU, "Creating buffers ...");
   BufferDescriptor buffer_desc{};
   buffer_desc.mappedAtCreation = false;
-  /// Create input buffer
-  buffer_desc.size = buffer_size_;
-  buffer_desc.usage = BufferUsage::Storage | BufferUsage::CopyDst;
-  input_buffer_ = device_.createBuffer(buffer_desc);
-  Print(PrintInfoType::WebGPU, "Input buffer: ", input_buffer_);
-  /// Create output buffer
-  buffer_desc.usage = BufferUsage::Storage | BufferUsage::CopySrc;
-  output_buffer_ = device_.createBuffer(buffer_desc);
-  Print(PrintInfoType::WebGPU, "Output buffer: ", output_buffer_);
+  /// Create vertex buffer
+  buffer_desc.size = vertex_buffer_size_ * sizeof(float);
+  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Vertex;
+  vertex_buffer_ = device_.createBuffer(buffer_desc);
+  Print(PrintInfoType::WebGPU, "Vertex buffer: ", vertex_buffer_);
+  queue_.writeBuffer(vertex_buffer_, 0, point_data.data(), buffer_desc.size);
+  /// Create index buffer
+  buffer_desc.size = index_buffer_size_ * sizeof(float);
+  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Index;
+  index_buffer_ = device_.createBuffer(buffer_desc);
+  Print(PrintInfoType::WebGPU, "Index buffer: ", index_buffer_);
+  queue_.writeBuffer(index_buffer_, 0, index_data.data(), buffer_desc.size);
+  /// Create uniform buffer
+  buffer_desc.size = uniform_buffer_size_;
+  buffer_desc.usage = BufferUsage::CopyDst | BufferUsage::Uniform;
+  uniform_buffer_ = device_.createBuffer(buffer_desc);
+  render_param_ = RenderParam(Color3(0.0f, 1.0f, 0.4f), 1.0f);
+  queue_.writeBuffer(uniform_buffer_, 0, &render_param_, buffer_desc.size);
 }
 
 /// \brief WebGPU BindGroup setup
 void Renderer::InitBindGroup() {
   Print(PrintInfoType::WebGPU, "Creating bind group ...");
   /// Create a binding
-  std::vector<BindGroupEntry> entries(2, Default);
-
-  /// Input buffer
-  entries[0].binding = 0;
-  entries[0].buffer = input_buffer_;
-  entries[0].offset = 0;
-  entries[0].size = buffer_size_;
-  /// Output buffer
-  entries[1].binding = 1;
-  entries[1].textureView = output_texture_view_;
+  BindGroupEntry binding{};
+  /// Uniform buffer
+  binding.binding = 0;
+  binding.buffer = uniform_buffer_;
+  binding.offset = 0;
+  binding.size = uniform_buffer_size_;
 
   BindGroupDescriptor bind_group_desc;
   bind_group_desc.layout = bind_group_layout_;
-  bind_group_desc.entryCount = (uint32_t) entries.size();
-  bind_group_desc.entries = (WGPUBindGroupEntry *) entries.data();
+  bind_group_desc.entryCount = 1;
+  bind_group_desc.entries = &binding;
   bind_group_ = device_.createBindGroup(bind_group_desc);
   Print(PrintInfoType::WebGPU, "Bind group: ", bind_group_);
 }
@@ -377,13 +457,6 @@ bool Renderer::OnRender(uint32_t frame) {
   /// Update camera
   float aspect = (float) WIDTH / (float) HEIGHT;
   camera_.Update(queue_, t, aspect);
-
-  /// Input buffer
-  std::vector<float> input(buffer_size_ / sizeof(float));
-  for (int i = 0; i < (int) input.size(); ++i) {
-    input[i] = 0.1f * (float) i;
-  }
-  queue_.writeBuffer(input_buffer_, 0, input.data(), input.size() * sizeof(float));
 
   // Initialize a command encoder
   CommandEncoderDescriptor encoder_desc = Default;
@@ -441,6 +514,10 @@ bool Renderer::OnRender(uint32_t frame) {
 void Renderer::OnFrame() {
   glfwPollEvents();
 
+  // Update uniform buffer
+  render_param_.time = static_cast<float>(glfwGetTime());
+  queue_.writeBuffer(uniform_buffer_, offsetof(RenderParam, time), &render_param_.time, sizeof(RenderParam::time));
+
   // Get target texture view
   TextureView next_texture = swap_chain_.getCurrentTextureView();
   if (!next_texture) {
@@ -452,6 +529,7 @@ void Renderer::OnFrame() {
   // Draw
   /// Command encoder
   CommandEncoderDescriptor encoder_desc = {};
+  encoder_desc.label = "Command Encoder";
   CommandEncoder encoder = device_.createCommandEncoder(encoder_desc);
   /// Create Render pass
   RenderPassDescriptor render_pass_desc = {};
@@ -462,19 +540,43 @@ void Renderer::OnFrame() {
   render_pass_color_attachment.resolveTarget = nullptr;
   render_pass_color_attachment.loadOp = LoadOp::Clear;
   render_pass_color_attachment.storeOp = StoreOp::Store;
-  render_pass_color_attachment.clearValue = WGPUColor{0.274f, 0.886f, 0.745f, 1.0f};
+  render_pass_color_attachment.clearValue = WGPUColor{0.05, 0.05, 0.05, 1.0};
   render_pass_desc.colorAttachmentCount = 1;
   render_pass_desc.colorAttachments = &render_pass_color_attachment;
-  render_pass_desc.depthStencilAttachment = nullptr;
+  // Depth buffer
+  RenderPassDepthStencilAttachment depth_stencil_attachment;
+  depth_stencil_attachment.view = depth_texture_view_;
+  depth_stencil_attachment.depthClearValue = 1.0f;
+  depth_stencil_attachment.depthLoadOp = LoadOp::Clear;
+  depth_stencil_attachment.depthStoreOp = StoreOp::Store;
+  depth_stencil_attachment.depthReadOnly = false;
+  depth_stencil_attachment.stencilClearValue = 0;
+#ifdef WEBGPU_BACKEND_WGPU
+  depth_stencil_attachment.stencilLoadOp = LoadOp::Clear;
+  depth_stencil_attachment.stencilStoreOp = StoreOp::Store;
+#else
+  depth_stencil_attachment.stencilLoadOp = LoadOp::Undefined;
+  depth_stencil_attachment.stencilStoreOp = StoreOp::Undefined;
+#endif
+  depth_stencil_attachment.stencilReadOnly = true;
+  render_pass_desc.depthStencilAttachment = &depth_stencil_attachment;
   render_pass_desc.timestampWriteCount = 0;
   render_pass_desc.timestampWrites = nullptr;
   render_pass_desc.nextInChain = nullptr;
   RenderPassEncoder render_pass = encoder.beginRenderPass(render_pass_desc);
   /// Draw Call
   render_pass.setPipeline(render_pipeline_);
+
+  render_pass.setVertexBuffer(0, vertex_buffer_, 0, vertex_buffer_size_ * sizeof(float));
+  render_pass.setIndexBuffer(index_buffer_, IndexFormat::Uint16, 0, index_buffer_size_ * sizeof(uint16_t));
+
   // Set binding group
   render_pass.setBindGroup(0, bind_group_, 0, nullptr);
-  render_pass.draw(3, 1, 0, 0);
+  render_pass.drawIndexed(static_cast<int>(index_buffer_size_), 1, 0, 0, 0);
+
+  /// TODO: Gui
+  // UpdateGui(render_pass);
+
   /// Just end the command for now
   render_pass.end();
 
@@ -488,33 +590,47 @@ void Renderer::OnFrame() {
 
   // Present texture
   swap_chain_.present();
+#ifdef WEBGPU_BACKEND_DAWN
+  device_.tick();
+#endif
 }
 
 /// \brief Called on application quit
 void Renderer::OnFinish() {
+  /// TODO: Dear ImGui
+  // TerminateGui();
+  /// TODO: Leave this for compute pipeline
   /// Release Camera
-  camera_.Release();
+  // camera_.Release();
   /// Release Scene
-  scene_.Release();
+  // scene_.Release();
   /// WebGPU stuff
   /// Release WebGPU bind group
   bind_group_.release();
   /// Release WebGPU buffer
-  input_buffer_.destroy();
-  input_buffer_.release();
+  uniform_buffer_.destroy();
+  uniform_buffer_.release();
+  index_buffer_.destroy();
+  index_buffer_.release();
+  vertex_buffer_.destroy();
+  vertex_buffer_.release();
   /// Release WebGPU pipelines
   render_pipeline_.release();
   // compute_pipeline_.release();
   pipeline_layout_.release();
   /// Release WebGPU bind group layout
   bind_group_layout_.release();
+  /// Release WebGPU depth buffer
+  depth_texture_view_.release();
+  depth_texture_.destroy();
+  depth_texture_.release();
   /// Release WebGPU swap chain
   swap_chain_.release();
   /// Release WebGPU texture views
-  output_texture_view_.release();
+  // output_texture_view_.release();
   /// Release WebGPU texture
-  texture_.destroy();
-  texture_.release();
+  // texture_.destroy();
+  // texture_.release();
   /// Release WebGPU device
   device_.release();
   /// Release WebGPU surface

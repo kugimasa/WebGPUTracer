@@ -29,6 +29,10 @@ private:
 
     void InitSwapChain();
 
+    void InitDepthBuffer();
+
+    void InitDepthTextureView();
+
     void InitBindGroupLayout();
 
     void InitRenderPipeline();
@@ -82,11 +86,29 @@ private:
     RenderPipeline render_pipeline_ = nullptr;
     ComputePipeline compute_pipeline_ = nullptr;
 
+    /// Uniform
+    struct RenderParam {
+        // offset = 0 * sizeof(vec4f) -> OK
+        std::array<float, 4> color{};
+        // offset = 16 = 4 * sizeof(f32) -> OK
+        float time{};
+        // offset = 16 = 4 * sizeof(f32) -> OK
+        float pad[3]{};
+
+        RenderParam() = default;
+
+        RenderParam(Color3 color, float time) : color({color.r, color.g, color.b, 1.0f}), time(time) {}
+    };
+
+    RenderParam render_param_ = {};
+
     /// Bind Group
     BindGroup bind_group_ = nullptr;
-    uint32_t buffer_size_ = 0;
+    uint32_t uniform_buffer_size_ = 0;
+    uint32_t vertex_buffer_size_ = 0;
+    uint32_t index_buffer_size_ = 0;
+    Buffer vertex_buffer_ = nullptr;
+    Buffer index_buffer_ = nullptr;
     Buffer uniform_buffer_ = nullptr;
-    Buffer input_buffer_ = nullptr;
-    Buffer output_buffer_ = nullptr;
     Buffer map_buffer_ = nullptr;
 };
